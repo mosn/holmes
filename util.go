@@ -92,7 +92,7 @@ func getUsagePhysical() (float64, float64, int, error) {
 		return 0, 0, 0, err
 	}
 
-	cpuPercent, err := p.CPUPercent()
+	cpuPercent, err := p.Percent(time.Second)
 	if err != nil {
 		return 0, 0, 0, err
 	}
