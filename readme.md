@@ -1,5 +1,7 @@
 # holmes
 
+[中文版](./readme_cn.md)
+
 Self-aware Golang profile dumper.
 
 Our online system often crashes(mostly killed by OOM or cpu use outage) in the midnight, as a lazy developer, we don't want to wake up at night and wait for the online bug to reproduce.
@@ -27,6 +29,8 @@ heap profile: 0: 0 [1: 1073741824] @ heap/1048576
 1: 1073741824 means 1 object and 1GB memory consumption.
 
 ### goroutine explosion caused by deadlock
+
+See this [example](./example/deadlock.go)
 
 curl localhost:10003/lockorder1
 
