@@ -2,9 +2,11 @@ package holmes
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path"
 	"runtime/pprof"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,6 +34,9 @@ type Holmes struct {
 
 	// textLogger
 	textFile *os.File
+
+	// switch
+	stopped int64
 }
 
 // New creates a holmes dumper
@@ -110,8 +115,14 @@ func (h *Holmes) EnableMemDump() WithType {
 
 // Start starts the dump loop of holmes
 func (h *Holmes) Start() {
+	atomic.StoreInt64(&h.stopped, 0)
 	h.initEnvironment()
 	go h.startDumpLoop()
+}
+
+// Stop the dump loop
+func (h *Holmes) Stop() {
+	atomic.StoreInt64(&h.stopped, 1)
 }
 
 func (h *Holmes) initEnvironment() {
@@ -137,7 +148,14 @@ func (h *Holmes) startDumpLoop() {
 	h.gNumStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	// dump loop
-	for range time.Tick(h.conf.CollectInterval) {
+	ticker := time.NewTicker(h.conf.CollectInterval)
+	for range ticker.C {
+		if atomic.LoadInt64(&h.stopped) == 1 {
+			ticker.Stop()
+			fmt.Println("dump loop stopped")
+			return
+		}
+
 		cpu, mem, gNum, err := collect()
 		if err != nil {
 			h.logf(err.Error())
