@@ -10,7 +10,7 @@ type Config struct {
 	DumpFullStack bool // only dump top 10, if set to false, dump all, only effective when in_text = true
 
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
-	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_diff percent > GoroutineTriggerPercentDiff
+	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine diff percent > GoroutineTriggerPercentDiff
 	//   2. goroutine_num > GoroutineTriggerNumAbsNum
 	EnableGoroutineDump         bool
 	GoroutineTriggerNumMin      int // goroutine trigger min in number
@@ -26,7 +26,7 @@ type Config struct {
 	CPUTriggerPercentAbs  int // cpu trigger abs inpercent
 
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > MemTriggerPercentMin && cpu usage diff > MemTriggerPercentDiff
+	//   1. memory usage > MemTriggerPercentMin && memory usage diff > MemTriggerPercentDiff
 	//   2. memory usage > MemTriggerPercentAbs
 	EnableMemDump         bool
 	MemTriggerPercentMin  int // mem trigger minimum in percent
