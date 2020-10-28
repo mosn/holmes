@@ -12,17 +12,17 @@ func (wt WithType) Config(min int, diff int, abs int) *Holmes {
 
 	switch wt.typ {
 	case mem:
-		h.conf.MemTriggerAbs = abs
-		h.conf.MemTriggerDiff = diff
-		h.conf.MemTriggerMin = min
+		h.conf.MemTriggerPercentAbs = abs
+		h.conf.MemTriggerPercentDiff = diff
+		h.conf.MemTriggerPercentMin = min
 	case cpu:
-		h.conf.CPUTriggerAbs = abs
-		h.conf.CPUTriggerDiff = diff
-		h.conf.CPUTriggerMin = min
+		h.conf.CPUTriggerPercentAbs = abs
+		h.conf.CPUTriggerPercentDiff = diff
+		h.conf.CPUTriggerPercentMin = min
 	case goroutine:
-		h.conf.GoroutineTriggerAbs = abs
-		h.conf.GoroutineTriggerDiff = diff
-		h.conf.GoroutineTriggerMin = min
+		h.conf.GoroutineTriggerNumAbs = abs
+		h.conf.GoroutineTriggerPercentDiff = diff
+		h.conf.GoroutineTriggerNumMin = min
 	}
 
 	return wt.h

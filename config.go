@@ -10,28 +10,28 @@ type Config struct {
 	DumpFullStack bool // only dump top 10, if set to false, dump all, only effective when in_text = true
 
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
-	//   1. goroutine_num > GoroutineTriggerMin && goroutine_diff > GoroutineTriggerDiff
-	//   2. goroutine_num > GoroutineTriggerAbs
-	EnableGoroutineDump  bool
-	GoroutineTriggerMin  int
-	GoroutineTriggerDiff int
-	GoroutineTriggerAbs  int
+	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_diff percent > GoroutineTriggerPercentDiff
+	//   2. goroutine_num > GoroutineTriggerNumAbsNum
+	EnableGoroutineDump         bool
+	GoroutineTriggerNumMin      int // goroutine trigger min in number
+	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
+	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
 
 	// enable the cpu dumper, should dump if one of the following requirements is matched
 	//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
 	//   2. cpu usage > CPUTriggerAbs
-	EnableCPUDump  bool
-	CPUTriggerMin  int // cpu trigger min in percent
-	CPUTriggerDiff int // cpu trigger diff in percent
-	CPUTriggerAbs  int // cpu trigger abs inpercent
+	EnableCPUDump         bool
+	CPUTriggerPercentMin  int // cpu trigger min in percent
+	CPUTriggerPercentDiff int // cpu trigger diff in percent
+	CPUTriggerPercentAbs  int // cpu trigger abs inpercent
 
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > MemTriggerMin && cpu usage diff > MemTriggerDiff
-	//   2. memory usage > MemTriggerAbs
-	EnableMemDump  bool
-	MemTriggerMin  int // mem trigger minimum in percent
-	MemTriggerAbs  int // mem trigger absolute in percent
-	MemTriggerDiff int // mem trigger diff in percent
+	//   1. memory usage > MemTriggerPercentMin && cpu usage diff > MemTriggerPercentDiff
+	//   2. memory usage > MemTriggerPercentAbs
+	EnableMemDump         bool
+	MemTriggerPercentMin  int // mem trigger minimum in percent
+	MemTriggerPercentDiff int // mem trigger diff in percent
+	MemTriggerPercentAbs  int // mem trigger absolute in percent
 
 	// interval for dump loop, default 5s
 	CollectInterval time.Duration

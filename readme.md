@@ -8,6 +8,39 @@ Our online system often crashes(mostly killed by OOM or cpu use outage) in the m
 
 holmes comes to rescue.
 
+## how to use
+
+### dump goroutine when goroutine number spikes
+
+```go
+var h = holmes.New("5s", "1m", "/tmp", false).
+	EnableGoroutineDump().Config(500, 25, 20000)
+```
+
+* 5s means the system metrics are collected once 5 seconds
+* 1m means once a dump happened, the next dump will not happen before cooldown finish.
+* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* false means not in binary mode, so it's text mode profiles
+* Config(500, 25, 20000) means dump will happen when current_goroutine_num > 500 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 20000
+
+### dump cpu profile when cpu load spikes
+
+```go
+```
+
+### dump heap profile when RSS spikes
+
+```go
+```
+
+### enable them all!
+
+TODO
+
+## known risks
+
+TODO
+
 ## case show
 
 ### RSS peak caused by make a 1GB slice

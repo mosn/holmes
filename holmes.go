@@ -77,9 +77,9 @@ func New(interval string, cooldown string, dumpPath string, binaryProfile bool) 
 // EnableGoroutineDump enables the goroutine dump and set the config for goroutine dump
 func (h *Holmes) EnableGoroutineDump() WithType {
 	h.conf.EnableGoroutineDump = true
-	h.conf.GoroutineTriggerAbs = defaultGoroutineTriggerAbs
-	h.conf.GoroutineTriggerDiff = defaultGoroutineTriggerDiff
-	h.conf.GoroutineTriggerMin = defaultGoroutineTriggerMin
+	h.conf.GoroutineTriggerNumAbs = defaultGoroutineTriggerAbs
+	h.conf.GoroutineTriggerPercentDiff = defaultGoroutineTriggerDiff
+	h.conf.GoroutineTriggerNumMin = defaultGoroutineTriggerMin
 
 	return WithType{
 		h:   h,
@@ -90,9 +90,9 @@ func (h *Holmes) EnableGoroutineDump() WithType {
 // EnableCPUDump enables the CPU dump and set the config for cpu profile dump
 func (h *Holmes) EnableCPUDump() WithType {
 	h.conf.EnableCPUDump = true
-	h.conf.CPUTriggerAbs = defaultCPUTriggerAbs
-	h.conf.CPUTriggerDiff = defaultCPUTriggerDiff
-	h.conf.CPUTriggerMin = defaultCPUTriggerMin
+	h.conf.CPUTriggerPercentAbs = defaultCPUTriggerAbs
+	h.conf.CPUTriggerPercentDiff = defaultCPUTriggerDiff
+	h.conf.CPUTriggerPercentMin = defaultCPUTriggerMin
 
 	return WithType{
 		h:   h,
@@ -103,9 +103,9 @@ func (h *Holmes) EnableCPUDump() WithType {
 // EnableMemDump enables the Mem dump and set the config for memory profile dump
 func (h *Holmes) EnableMemDump() WithType {
 	h.conf.EnableMemDump = true
-	h.conf.MemTriggerAbs = defaultMemTriggerAbs
-	h.conf.MemTriggerDiff = defaultMemTriggerDiff
-	h.conf.MemTriggerMin = defaultMemTriggerMin
+	h.conf.MemTriggerPercentAbs = defaultMemTriggerAbs
+	h.conf.MemTriggerPercentDiff = defaultMemTriggerDiff
+	h.conf.MemTriggerPercentMin = defaultMemTriggerMin
 
 	return WithType{
 		h:   h,
@@ -186,9 +186,9 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 }
 
 func (h *Holmes) goroutineProfile(gNum int, c Config) bool {
-	if !matchRule(h.gNumStats, gNum, c.GoroutineTriggerMin, c.GoroutineTriggerAbs, c.GoroutineTriggerDiff) {
+	if !matchRule(h.gNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff) {
 		h.debugf("NODUMP goroutine, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
-			c.GoroutineTriggerMin, c.GoroutineTriggerDiff, c.GoroutineTriggerAbs,
+			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
 			h.gNumStats.data, gNum)
 
 		return false
@@ -223,10 +223,10 @@ func (h *Holmes) memCheckAndDump(mem int) {
 }
 
 func (h *Holmes) memProfile(rss int, c Config) bool {
-	if !matchRule(h.memStats, rss, c.MemTriggerMin, c.MemTriggerAbs, c.MemTriggerDiff) {
+	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff) {
 		// let user know why this should not dump
 		h.debugf("NODUMP, memory, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current : %v",
-			c.MemTriggerMin, c.MemTriggerDiff, c.MemTriggerAbs,
+			c.MemTriggerPercentMin, c.MemTriggerPercentDiff, c.MemTriggerPercentAbs,
 			h.memStats.data, rss)
 
 		return false
@@ -261,10 +261,10 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 }
 
 func (h *Holmes) cpuProfile(curCPUUsage int, c Config) bool {
-	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerMin, c.CPUTriggerAbs, c.CPUTriggerDiff) {
+	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff) {
 		// let user know why this should not dump
 		h.debugf("NODUMP cpu, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
-			c.CPUTriggerMin, c.CPUTriggerDiff, c.CPUTriggerAbs,
+			c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
@@ -289,7 +289,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c Config) bool {
 	time.Sleep(time.Second * 5)
 	pprof.StopCPUProfile()
 	h.logf("pprof cpu dump to log dir, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
-		c.CPUTriggerMin, c.CPUTriggerDiff, c.CPUTriggerAbs,
+		c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs,
 		h.cpuStats.data, curCPUUsage)
 
 	return true
@@ -301,11 +301,11 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	switch dumpType {
 	case mem:
 		h.logf("pprof memory, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current : %v",
-			h.conf.MemTriggerMin, h.conf.MemTriggerDiff, h.conf.MemTriggerAbs,
+			h.conf.MemTriggerPercentMin, h.conf.MemTriggerPercentDiff, h.conf.MemTriggerPercentAbs,
 			h.memStats.data, currentStat)
 	case goroutine:
 		h.logf("pprof goroutine, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
-			h.conf.GoroutineTriggerMin, h.conf.GoroutineTriggerDiff, h.conf.GoroutineTriggerAbs,
+			h.conf.GoroutineTriggerNumMin, h.conf.GoroutineTriggerPercentDiff, h.conf.GoroutineTriggerNumAbs,
 			h.gNumStats.data, currentStat)
 	}
 
