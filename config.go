@@ -26,7 +26,7 @@ type Config struct {
 	CPUTriggerAbs  int // cpu trigger abs inpercent
 
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > MemTriggerMin && cpu usage diff > MemTriggerDiff
+	//   1. memory usage > MemTriggerMin && memory usage diff > MemTriggerDiff
 	//   2. memory usage > MemTriggerAbs
 	EnableMemDump  bool
 	MemTriggerMin  int // mem trigger minimum in percent
