@@ -70,6 +70,8 @@ curl localhost:10003/lockorder2
 
 req 接口被死锁阻塞了。
 
+定位死锁 bug 需要开启 DumpFullStack，否则栈可能会被截断，会看不到具体锁在哪里。
+
 ### channel 阻塞导致 goroutine 堆积，OOM
 
 参考这个 [例子](examples/channelblock.go)
@@ -118,6 +120,61 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 #	0x4255d72	net/http.serverHandler.ServeHTTP+0xa2	/Users/xargin/sdk/go1.14.2/src/net/http/server.go:2807
 #	0x425202b	net/http.(*conn).serve+0x86b		/Users/xargin/sdk/go1.14.2/src/net/http/server.go:1895
 ```
+
+### deadloop caused cpu outage
+
+参考这个 [例子](./example/cpu_explode).
+
+warming up 结束后，curl localhost:10003/cpuex 几次，然后就可以看到 cpu profile 被 dump 到启动时设置的 dump 目录了。
+
+注意，当前 cpu 的 profile 暂时还不支持 text 模式。需要用 go tool pprof 来浏览。
+
+```
+go tool pprof cpu.20201028100641.bin
+
+(pprof) top
+Showing nodes accounting for 19.45s, 99.95% of 19.46s total
+Dropped 6 nodes (cum <= 0.10s)
+      flat  flat%   sum%        cum   cum%
+    17.81s 91.52% 91.52%     19.45s 99.95%  main.cpuex.func1
+     1.64s  8.43% 99.95%      1.64s  8.43%  runtime.asyncPreempt
+
+(pprof) list func1
+Total: 19.46s
+ROUTINE ======================== main.cpuex.func1 in /Users/xargin/go/src/github.com/mosn/holmes/example/cpu_explode.go
+    17.81s     19.45s (flat, cum) 99.95% of Total
+      80ms       80ms      1:package main
+         .          .      2:
+         .          .      3:import (
+         .          .      4:	"net/http"
+         .          .      5:	"time"
+         .          .      6:
+         .          .      7:	"github.com/mosn/holmes"
+         .          .      8:)
+         .          .      9:
+         .          .     10:func init() {
+         .          .     11:	http.HandleFunc("/cpuex", cpuex)
+         .          .     12:	go http.ListenAndServe(":10003", nil)
+         .          .     13:}
+         .          .     14:
+         .          .     15:var h = holmes.New("2s", "1m", "/tmp", false).
+         .          .     16:	EnableCPUDump().Config(20, 25, 80)
+         .          .     17:
+         .          .     18:func main() {
+         .          .     19:	h.Start()
+         .          .     20:	time.Sleep(time.Hour)
+         .          .     21:}
+         .          .     22:
+         .          .     23:func cpuex(wr http.ResponseWriter, req *http.Request) {
+         .          .     24:	go func() {
+    17.73s     19.37s     25:		for {
+         .          .     26:		}
+         .          .     27:	}()
+         .          .     28:}
+
+```
+
+So we find out the criminal.
 
 ### cgo 阻塞导致线程数暴涨
 

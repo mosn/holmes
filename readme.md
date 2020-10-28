@@ -72,6 +72,8 @@ After warming up, wrk -c 100 http://localhost:10003/req, then you'll see the dea
 
 The req API was blocked by deadlock.
 
+Your should set DumpFullStack to true to locate deadlock bug.
+
 ### goroutine explosion caused by channel block
 
 see this [example](examples/channelblock.go)
@@ -94,7 +96,7 @@ It's easy to locate.
 
 See this [example](example/slowlyleak.go)
 
-The producer forget to close the task channel after produce finishes, so every request to this URI will leak a goroutine, we could curl http://localhost:10003/leak some time and got the following log:
+The producer forget to close the task channel after produce finishes, so every request to this URI will leak a goroutine, we could curl http://localhost:10003/leak several time and got the following log:
 
 ```
 goroutine profile: total 10
@@ -120,6 +122,61 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 #	0x4255d72	net/http.serverHandler.ServeHTTP+0xa2	/Users/xargin/sdk/go1.14.2/src/net/http/server.go:2807
 #	0x425202b	net/http.(*conn).serve+0x86b		/Users/xargin/sdk/go1.14.2/src/net/http/server.go:1895
 ```
+
+### deadloop caused cpu outage
+
+See this [example](./example/cpu_explode).
+
+After warming up finished, curl localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
+
+Notice the cpu profile currently doesn't support text mode.
+
+```
+go tool pprof cpu.20201028100641.bin
+
+(pprof) top
+Showing nodes accounting for 19.45s, 99.95% of 19.46s total
+Dropped 6 nodes (cum <= 0.10s)
+      flat  flat%   sum%        cum   cum%
+    17.81s 91.52% 91.52%     19.45s 99.95%  main.cpuex.func1
+     1.64s  8.43% 99.95%      1.64s  8.43%  runtime.asyncPreempt
+
+(pprof) list func1
+Total: 19.46s
+ROUTINE ======================== main.cpuex.func1 in /Users/xargin/go/src/github.com/mosn/holmes/example/cpu_explode.go
+    17.81s     19.45s (flat, cum) 99.95% of Total
+      80ms       80ms      1:package main
+         .          .      2:
+         .          .      3:import (
+         .          .      4:	"net/http"
+         .          .      5:	"time"
+         .          .      6:
+         .          .      7:	"github.com/mosn/holmes"
+         .          .      8:)
+         .          .      9:
+         .          .     10:func init() {
+         .          .     11:	http.HandleFunc("/cpuex", cpuex)
+         .          .     12:	go http.ListenAndServe(":10003", nil)
+         .          .     13:}
+         .          .     14:
+         .          .     15:var h = holmes.New("2s", "1m", "/tmp", false).
+         .          .     16:	EnableCPUDump().Config(20, 25, 80)
+         .          .     17:
+         .          .     18:func main() {
+         .          .     19:	h.Start()
+         .          .     20:	time.Sleep(time.Hour)
+         .          .     21:}
+         .          .     22:
+         .          .     23:func cpuex(wr http.ResponseWriter, req *http.Request) {
+         .          .     24:	go func() {
+    17.73s     19.37s     25:		for {
+         .          .     26:		}
+         .          .     27:	}()
+         .          .     28:}
+
+```
+
+So we find out the criminal.
 
 ### large thread allocation caused by cgo block 
 
