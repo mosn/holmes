@@ -2,9 +2,11 @@
 
 [中文版](./readme_cn.md)
 
+**WARNING** : holmes is under heavy development now, so API will make breaking change during dev. If you want to use it in production, please wait for the first release.
+
 Self-aware Golang profile dumper.
 
-Our online system often crashes(mostly killed by OOM or cpu use outage) in the midnight, as a lazy developer, we don't want to wake up at night and wait for the online bug to reproduce.
+Our online system often crashes(mostly killed by OOM) in the midnight, as a lazy developer, we don't want to wake up at night and wait for the online bug to reproduce.
 
 holmes comes to rescue.
 
@@ -14,11 +16,17 @@ holmes comes to rescue.
 
 ```go
 var h = holmes.New("5s", "1m", "/tmp", false).
-	EnableGoroutineDump().Config(500, 25, 20000)
+     EnableGoroutineDump().Config(500, 25, 20000)
+     
+// start the metrics collect and dump loop
+h.Start()
+
+// stop the dumper
+h.Stop()
 ```
 
 * 5s means the system metrics are collected once 5 seconds
-* 1m means once a dump happened, the next dump will not happen before cooldown finish.
+* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
 * /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
 * false means not in binary mode, so it's text mode profiles
 * Config(500, 25, 20000) means dump will happen when current_goroutine_num > 500 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 20000
@@ -26,20 +34,67 @@ var h = holmes.New("5s", "1m", "/tmp", false).
 ### dump cpu profile when cpu load spikes
 
 ```go
+var h = holmes.New("5s", "1m", "/tmp", false).
+     EnableCPUDump().Config(10, 25, 80)
+
+// start the metrics collect and dump loop
+h.Start()
+
+// stop the dumper
+h.Stop()
 ```
+
+* 5s means the system metrics are collected once 5 seconds
+* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
+* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* true or false doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
+* Config(10, 25, 80) means dump will happen when cpu usage > 10% && cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%
 
 ### dump heap profile when RSS spikes
 
 ```go
+var h = holmes.New("5s", "1m", "/tmp", false).
+	EnableMemDump().Config(30, 25, 80)
+
+// start the metrics collect and dump loop
+h.Start()
+
+// stop the dumper
+h.Stop()
 ```
+
+* 5s means the system metrics are collected once 5 seconds
+* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
+* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* true or false doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
+* Config(30, 25, 80) means dump will happen when memory usage > 10% && memory usage > 125% * previous memory usage or memory usage > 80%
 
 ### enable them all!
 
-TODO
+It's easy.
+
+```go
+var h = holmes.New("5s", "1m", "/tmp", false).
+     EnableMemDump().Config(30, 25, 80).
+     EnableCPUDump().Config(10, 25, 80).
+     EnableGoroutineDump().Config(500, 25, 20000)
+```
 
 ## known risks
 
-TODO
+Collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the STW.
+
+## design
+
+Holmes collects the following stats every interval passed:
+
+* Goroutine number by runtime.NumGoroutine.
+* RSS used by the current process with [gopsutil](https://github.com/shirou/gopsutil)
+* CPU percent a total. eg total 8 core, use 4 core = 50% with [gopsutil](https://github.com/shirou/gopsutil) 
+
+After warming up phase finished, Holmes will compare the current stats with the average of previous collected stats(10 cycles). If the dump rule is matched, Holmes will dump the related profile to log(text mode) or binary file(binary mode).
+
+When you get warning messages sent by your own monitor system, eg. memory usage exceed 80%, OOM killed, CPU usage exceed 80%, goroutine nun exceed 100k. The profile is already dumped to your dump path. You could just fetch the profile and see what actually happend without pressure.
 
 ## case show
 
@@ -109,7 +164,7 @@ Your should set DumpFullStack to true to locate deadlock bug.
 
 ### goroutine explosion caused by channel block
 
-see this [example](examples/channelblock.go)
+see this [example](example/channelblock.go)
 
 after warming up, just  wrk -c100 http://localhost:10003/chanblock
 
@@ -158,7 +213,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 ### deadloop caused cpu outage
 
-See this [example](./example/cpu_explode).
+See this [example](example/cpu_explode.go).
 
 After warming up finished, curl localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
 

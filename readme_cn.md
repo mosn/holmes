@@ -1,14 +1,12 @@
 # Holmes 福尔摩斯
 
+**警告** ： Holmes 目前还在初期开发中，API 可能会变，如果要在生产环境用，建议等一下 release 版本。
+
 自省的 Golang Profile dumper。
 
-现代的 Go 程序大多运行在环境有限制的 docker 里，在比较大的项目里，我们没办法直接很快掌握所有代码细节，但历史项目在线上运行总是难免因为各种遗留 bug 而 crash。这里最讨厌的就是那些总是在半夜 crash 的，很多 crash 在一瞬间发生，半分钟内 OOM kill 重启，从发现有问题到上线去看现场已经来不及了，哪怕是白天都不一定抓得到，晚上的就更尴尬了。
+现代的 Go 程序大多运行在环境有限制的 docker 里，在比较大的项目里，我们没办法直接很快掌握所有代码细节，但历史项目在线上运行总是难免因为各种遗留 bug 而 OOM 被 kill。这里最讨厌的就是那些总是在半夜 crash 的，很多 crash 在一瞬间发生，半分钟内 OOM kill 重启，从发现有问题到上线去看现场已经来不及了，哪怕是白天都不一定抓得到，晚上的就更尴尬了。
 
 holmes 是为了解决抖动问题定位难而生的。
-
-## 如何使用
-
-TODO
 
 ## case show
 
@@ -32,7 +30,7 @@ heap profile: 0: 0 [1: 1073741824] @ heap/1048576
 
 ### 死锁导致 goroutine 堆积，OOM
 
-参考这个 [例子](./example/deadlock.go)
+参考这个 [例子](example/deadlock.go)
 
 curl localhost:10003/lockorder1
 
@@ -78,7 +76,7 @@ req 接口被死锁阻塞了。
 
 ### channel 阻塞导致 goroutine 堆积，OOM
 
-参考这个 [例子](examples/channelblock.go)
+参考这个 [例子](example/channelblock.go)
 
 预热结束后, wrk -c100 http://localhost:10003/chanblock
 
@@ -127,7 +125,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 ### CPU 使用尖峰，以死循环为例
 
-参考这个 [例子](./example/cpu_explode).
+参考这个 [例子](example/cpu_explode.go).
 
 warming up 结束后，curl localhost:10003/cpuex 几次，然后就可以看到 cpu profile 被 dump 到启动时设置的 dump 目录了。
 
