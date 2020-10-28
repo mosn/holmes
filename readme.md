@@ -15,9 +15,15 @@ holmes comes to rescue.
 ### dump goroutine when goroutine number spikes
 
 ```go
-var h = holmes.New("5s", "1m", "/tmp", false).
-     EnableGoroutineDump().Config(500, 25, 20000)
-     
+h, _ := holmes.New(
+    holmes.WithCollectInterval("5s"),
+    holmes.WithCoolDown("1m"),
+    holmes.WithDumpPath("/tmp"),
+    holmes.WithTextDump(),
+    holmes.WithGoroutineDump(10, 25, 2000),
+)
+h.EnableGoroutineDump()
+
 // start the metrics collect and dump loop
 h.Start()
 
@@ -25,17 +31,22 @@ h.Start()
 h.Stop()
 ```
 
-* 5s means the system metrics are collected once 5 seconds
-* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
-* false means not in binary mode, so it's text mode profiles
-* Config(500, 25, 20000) means dump will happen when current_goroutine_num > 500 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 20000
+* WithCollectInterval("5s") means the system metrics are collected once 5 seconds
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* WithTextDump() means not in binary mode, so it's text mode profiles
+* WithGoroutineDump(500, 25, 20000) means dump will happen when current_goroutine_num > 500 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 20000
 
 ### dump cpu profile when cpu load spikes
 
 ```go
-var h = holmes.New("5s", "1m", "/tmp", false).
-     EnableCPUDump().Config(10, 25, 80)
+h, _ := holmes.New(
+    holmes.WithCollectInterval("5s"),
+    holmes.WithCoolDown("1m"),
+    holmes.WithDumpPath("/tmp"),
+    holmes.WithCPUDump(20, 25, 80),
+)
+h.EnableCPUDump()
 
 // start the metrics collect and dump loop
 h.Start()
@@ -44,17 +55,24 @@ h.Start()
 h.Stop()
 ```
 
-* 5s means the system metrics are collected once 5 seconds
-* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
-* true or false doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
-* Config(10, 25, 80) means dump will happen when cpu usage > 10% && cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%
+* WithCollectInterval("5s") means the system metrics are collected once 5 seconds
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* WithBinaryDump() or WithTextDump() doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
+* WithCPUDump(10, 25, 80) means dump will happen when cpu usage > 10% && cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%
 
 ### dump heap profile when RSS spikes
 
 ```go
-var h = holmes.New("5s", "1m", "/tmp", false).
-	EnableMemDump().Config(30, 25, 80)
+h, _ := holmes.New(
+    holmes.WithCollectInterval("5s"),
+    holmes.WithCoolDown("1m"),
+    holmes.WithDumpPath("/tmp"),
+    holmes.WithTextDump(),
+    holmes.WithMemDump(30, 25, 80),
+)
+
+h.EnableMemDump()
 
 // start the metrics collect and dump loop
 h.Start()
@@ -63,21 +81,30 @@ h.Start()
 h.Stop()
 ```
 
-* 5s means the system metrics are collected once 5 seconds
-* 1m means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* /tmp means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
-* true or false doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
-* Config(30, 25, 80) means dump will happen when memory usage > 10% && memory usage > 125% * previous memory usage or memory usage > 80%
+* WithCollectInterval("5s") means the system metrics are collected once 5 seconds
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* WithTextDump() means not in binary mode, so it's text mode profiles
+* WithMemDump(30, 25, 80) means dump will happen when memory usage > 10% && memory usage > 125% * previous memory usage or memory usage > 80%
 
 ### enable them all!
 
 It's easy.
 
 ```go
-var h = holmes.New("5s", "1m", "/tmp", false).
-     EnableMemDump().Config(30, 25, 80).
-     EnableCPUDump().Config(10, 25, 80).
-     EnableGoroutineDump().Config(500, 25, 20000)
+h, _ := holmes.New(
+    holmes.WithCollectInterval("5s"),
+    holmes.WithCoolDown("1m"),
+    holmes.WithDumpPath("/tmp"),
+    holmes.WithTextDump(),
+
+    holmes.WithCPUDump(10, 25, 80),
+    holmes.WithMemDump(30, 25, 80),
+    holmes.WithGoroutineDump(500, 25, 20000),
+)
+h.EnableMemDump().
+EnableCPUDump().
+EnableGoroutineDump
 ```
 
 ## known risks

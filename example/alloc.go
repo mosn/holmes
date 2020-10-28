@@ -13,11 +13,15 @@ func init() {
 	go http.ListenAndServe(":10003", nil)
 }
 
-var h = holmes.New("2s", "1m", "/tmp", false).
-	EnableMemDump().Config(3, 25, 80)
-
 func main() {
-	h.Start()
+	h, _ := holmes.New(
+		holmes.WithCollectInterval("2s"),
+		holmes.WithCoolDown("1m"),
+		holmes.WithDumpPath("/tmp"),
+		holmes.WithTextDump(),
+		holmes.WithMemDump(3, 25, 80),
+	)
+	h.EnableMemDump().Start()
 	time.Sleep(time.Hour)
 }
 
