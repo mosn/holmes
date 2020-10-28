@@ -116,24 +116,12 @@ func (h *Holmes) EnableMemDump() WithType {
 // Start starts the dump loop of holmes
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
-	h.initEnvironment()
 	go h.startDumpLoop()
 }
 
 // Stop the dump loop
 func (h *Holmes) Stop() {
 	atomic.StoreInt64(&h.stopped, 1)
-}
-
-func (h *Holmes) initEnvironment() {
-	// is this a docker environment or physical?
-	if _, err := readUint(cgroupMemLimitPath); err == nil {
-		// docker
-		getUsage = getUsageDocker
-	} else {
-		// physical machine
-		getUsage = getUsagePhysical
-	}
 }
 
 func (h *Holmes) startDumpLoop() {

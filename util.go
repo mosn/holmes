@@ -13,6 +13,10 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
+func init() {
+	initEnvironment()
+}
+
 // copied from https://github.com/containerd/cgroups/blob/318312a373405e5e91134d8063d04d59768a1bff/utils.go#L251
 func parseUint(s string, base, bitSize int) (uint64, error) {
 	v, err := strconv.ParseUint(s, base, bitSize)
@@ -113,6 +117,17 @@ func getUsagePhysical() (float64, float64, int, error) {
 }
 
 var getUsage func() (float64, float64, int, error)
+
+func initEnvironment() {
+	// is this a docker environment or physical?
+	if _, err := readUint(cgroupMemLimitPath); err == nil {
+		// docker
+		getUsage = getUsageDocker
+	} else {
+		// physical machine
+		getUsage = getUsagePhysical
+	}
+}
 
 // cpu mem goroutine err
 func collect() (int, int, int, error) {
