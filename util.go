@@ -163,6 +163,3 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
 
-func getDebugLogFileName(filePath string) string {
-	return path.Join(filePath, "holmes_debug.log")
-}

@@ -4,7 +4,7 @@
 
 现代的 Go 程序大多运行在环境有限制的 docker 里，在比较大的项目里，我们没办法直接很快掌握所有代码细节，但历史项目在线上运行总是难免因为各种遗留 bug 而 crash。这里最讨厌的就是那些总是在半夜 crash 的，很多 crash 在一瞬间发生，半分钟内 OOM kill 重启，从发现有问题到上线去看现场已经来不及了，哪怕是白天都不一定抓得到，晚上的就更尴尬了。
 
-holmes 是为了解决这种定位抖动问题而生的。
+holmes 是为了解决抖动问题定位难而生的。
 
 ## case show
 
@@ -121,7 +121,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 #	0x425202b	net/http.(*conn).serve+0x86b		/Users/xargin/sdk/go1.14.2/src/net/http/server.go:1895
 ```
 
-### deadloop caused cpu outage
+### CPU 使用尖峰，以死循环为例
 
 参考这个 [例子](./example/cpu_explode).
 
