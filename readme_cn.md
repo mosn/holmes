@@ -174,7 +174,7 @@ ROUTINE ======================== main.cpuex.func1 in /Users/xargin/go/src/github
 
 ```
 
-So we find out the criminal.
+这个 for 循环就是犯罪现场了。
 
 ### cgo 阻塞导致线程数暴涨
 
