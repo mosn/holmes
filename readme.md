@@ -102,9 +102,11 @@ h, _ := holmes.New(
     holmes.WithMemDump(30, 25, 80),
     holmes.WithGoroutineDump(500, 25, 20000),
 )
+
 h.EnableMemDump().
-EnableCPUDump().
-EnableGoroutineDump
+    EnableCPUDump().
+    EnableGoroutineDump()
+
 ```
 
 ## known risks
