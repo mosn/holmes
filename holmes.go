@@ -265,12 +265,14 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	case mem:
 		opts := h.opts.MemOpts
 		h.logf("[Holmes] pprof memory, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current : %v",
-			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs,
+			type2name[dumpType], opts.MemTriggerPercentMin,
+			opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs,
 			h.memStats.data, currentStat)
 	case goroutine:
 		opts := h.opts.GrOpts
 		h.logf("[Holmes] pprof goroutine, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
-			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs,
+			type2name[dumpType], opts.GoroutineTriggerNumMin,
+			opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs,
 			h.grNumStats.data, currentStat)
 	}
 
@@ -285,13 +287,13 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	} else {
 		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil {
-			h.logf("[Holmes] pprof memory write to file failed : %v", err.Error())
+			h.logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
 			return
 		}
 		defer bf.Close()
 
 		if _, err = bf.Write(data.Bytes()); err != nil {
-			h.logf("[Holmes] pprof memory write to file failed : %v", err.Error())
+			h.logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
 		}
 	}
 }
