@@ -264,13 +264,13 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	switch dumpType {
 	case mem:
 		opts := h.opts.MemOpts
-		h.logf("[Holmes] pprof memory, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current : %v",
+		h.logf("[Holmes] pprof %v, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current : %v",
 			type2name[dumpType], opts.MemTriggerPercentMin,
 			opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs,
 			h.memStats.data, currentStat)
 	case goroutine:
 		opts := h.opts.GrOpts
-		h.logf("[Holmes] pprof goroutine, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
+		h.logf("[Holmes] pprof %v, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
 			type2name[dumpType], opts.GoroutineTriggerNumMin,
 			opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs,
 			h.grNumStats.data, currentStat)
