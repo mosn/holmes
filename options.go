@@ -7,22 +7,32 @@ import (
 )
 
 type options struct {
-	DumpPath        string          // full path to put the profile files, default /tmp
-	DumpProfileType dumpProfileType // default dump to binary profile, set to true if you want a text profile
-	DumpFullStack   bool            // only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
-	Logger          *os.File
+	// whether use the cgroup to calc memory or not
+	UseCGroup bool
+
+	// full path to put the profile files, default /tmp
+	DumpPath string
+	// default dump to binary profile, set to true if you want a text profile
+	DumpProfileType dumpProfileType
+	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
+	DumpFullStack bool
+
+	Logger *os.File
 
 	// interval for dump loop, default 5s
 	CollectInterval time.Duration
+
 	// the cooldown time after every type of dump
+	// interval for cooldown，default 1m
 	// the cpu/mem/goroutine have different cooldowns of their own
-	CoolDown time.Duration // interval for cooldown，default 1m
+	CoolDown time.Duration
 
 	GrOpts  *grOptions
 	MemOpts *memOptions
 	CPUOpts *cpuOptions
 }
 
+// Option holmes option type.
 type Option interface {
 	apply(*options) error
 }
@@ -47,7 +57,7 @@ func newOptions() *options {
 	}
 }
 
-// interval must be valid time duration string,
+// WithCollectInterval : interval must be valid time duration string,
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCollectInterval(interval string) Option {
 	return optionFunc(func(opts *options) (err error) {
@@ -56,7 +66,7 @@ func WithCollectInterval(interval string) Option {
 	})
 }
 
-// coolDown must be valid time duration string,
+// WithCoolDown : coolDown must be valid time duration string,
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
@@ -65,6 +75,7 @@ func WithCoolDown(coolDown string) Option {
 	})
 }
 
+// WithDumpPath set the dump path for holmes.
 func WithDumpPath(dumpPath string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.DumpPath = dumpPath
@@ -73,14 +84,17 @@ func WithDumpPath(dumpPath string) Option {
 	})
 }
 
+// WithBinaryDump set dump mode to binary.
 func WithBinaryDump() Option {
 	return withDumpProfileType(binaryDump)
 }
 
+// WithTextDump set dump mode to text.
 func WithTextDump() Option {
 	return withDumpProfileType(textDump)
 }
 
+// WithFullStack set to dump full stack or top 10 stack, when dump in text mode.
 func WithFullStack(isFull bool) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.DumpFullStack = isFull
@@ -114,6 +128,7 @@ func newGrOptions() *grOptions {
 	}
 }
 
+// WithGoroutineDump set the goroutine dump options.
 func WithGoroutineDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.GrOpts.GoroutineTriggerNumMin = min
@@ -142,6 +157,7 @@ func newMemOptions() *memOptions {
 	}
 }
 
+// WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.MemOpts.MemTriggerPercentMin = min
@@ -170,11 +186,20 @@ func newCPUOptions() *cpuOptions {
 	}
 }
 
+// WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.CPUOpts.CPUTriggerPercentMin = min
 		opts.CPUOpts.CPUTriggerPercentDiff = diff
 		opts.CPUOpts.CPUTriggerPercentAbs = abs
+		return
+	})
+}
+
+// WithCGroup set holmes use cgroup or not.
+func WithCGroup(useCGroup bool) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.UseCGroup = useCGroup
 		return
 	})
 }

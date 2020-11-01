@@ -13,10 +13,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-func init() {
-	initEnvironment()
-}
-
 // copied from https://github.com/containerd/cgroups/blob/318312a373405e5e91134d8063d04d59768a1bff/utils.go#L251
 func parseUint(s string, base, bitSize int) (uint64, error) {
 	v, err := strconv.ParseUint(s, base, bitSize)
@@ -45,7 +41,7 @@ func readUint(path string) (uint64, error) {
 	return parseUint(strings.TrimSpace(string(v)), 10, 64)
 }
 
-// only reserve the top 10
+// only reserve the top 10.
 func trimResult(buffer bytes.Buffer) string {
 	arr := strings.Split(buffer.String(), "\n\n")
 	if len(arr) > 10 {
@@ -55,14 +51,14 @@ func trimResult(buffer bytes.Buffer) string {
 }
 
 // return cpu percent, mem in MB, goroutine num
-// docker ver
-func getUsageDocker() (float64, float64, int, error) {
+// cgroup ver.
+func getUsageCGroup() (float64, float64, int, error) {
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
-	cpuPercent, err := p.CPUPercent()
+	cpuPercent, err := p.Percent(time.Second)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -89,8 +85,8 @@ func getUsageDocker() (float64, float64, int, error) {
 }
 
 // return cpu percent, mem in MB, goroutine num
-// phys ver
-func getUsagePhysical() (float64, float64, int, error) {
+// not use cgroup ver.
+func getUsageNormal() (float64, float64, int, error) {
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
 		return 0, 0, 0, err
@@ -118,25 +114,14 @@ func getUsagePhysical() (float64, float64, int, error) {
 
 var getUsage func() (float64, float64, int, error)
 
-func initEnvironment() {
-	// is this a docker environment or physical?
-	if _, err := readUint(cgroupMemLimitPath); err == nil {
-		// docker
-		getUsage = getUsageDocker
-	} else {
-		// physical machine
-		getUsage = getUsagePhysical
-	}
-}
-
-// cpu mem goroutine err
+// cpu mem goroutine err.
 func collect() (int, int, int, error) {
 	cpu, mem, gNum, err := getUsage()
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
-	return int(cpu), int(mem), int(gNum), nil
+	return int(cpu), int(mem), gNum, nil
 }
 
 func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff int) bool {
@@ -162,4 +147,3 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
-

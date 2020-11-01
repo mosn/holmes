@@ -109,6 +109,20 @@ h.EnableMemDump().
 
 ```
 
+### running in docker or other cgroup limited environment
+
+```go
+h, _ := holmes.New(
+    holmes.WithCollectInterval("5s"),
+    holmes.WithCoolDown("1m"),
+    holmes.WithDumpPath("/tmp"),
+    holmes.WithTextDump(),
+
+    holmes.WithCPUDump(10, 25, 80),
+    holmes.WithCGroup(true),
+)
+```
+
 ## known risks
 
 Collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the STW.

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Holmes is a self-aware profile dumper
+// Holmes is a self-aware profile dumper.
 type Holmes struct {
 	opts *options
 
@@ -33,7 +33,7 @@ type Holmes struct {
 	stopped int64
 }
 
-// New creates a holmes dumper
+// New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
 		opts: newOptions(),
@@ -48,46 +48,50 @@ func New(opts ...Option) (*Holmes, error) {
 	return holmes, nil
 }
 
-// EnableGoroutineDump enables the goroutine dump and set the config for goroutine dump
+// EnableGoroutineDump enables the goroutine dump.
 func (h *Holmes) EnableGoroutineDump() *Holmes {
 	h.opts.GrOpts.Enable = true
 	return h
 }
 
+// DisableGoroutineDump disables the goroutine dump.
 func (h *Holmes) DisableGoroutineDump() *Holmes {
 	h.opts.GrOpts.Enable = false
 	return h
 }
 
-// EnableCPUDump enables the CPU dump and set the config for cpu profile dump
+// EnableCPUDump enables the CPU dump.
 func (h *Holmes) EnableCPUDump() *Holmes {
 	h.opts.CPUOpts.Enable = true
 	return h
 }
 
+// DisableCPUDump disables the CPU dump.
 func (h *Holmes) DisableCPUDump() *Holmes {
 	h.opts.CPUOpts.Enable = false
 	return h
 }
 
-// EnableMemDump enables the Mem dump and set the config for memory profile dump
+// EnableMemDump enables the mem dump.
 func (h *Holmes) EnableMemDump() *Holmes {
 	h.opts.MemOpts.Enable = true
 	return h
 }
 
+// DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
 	h.opts.MemOpts.Enable = false
 	return h
 }
 
-// Start starts the dump loop of holmes
+// Start starts the dump loop of holmes.
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
+	h.initEnvironment()
 	go h.startDumpLoop()
 }
 
-// Stop the dump loop
+// Stop the dump loop.
 func (h *Holmes) Stop() {
 	atomic.StoreInt64(&h.stopped, 1)
 }
@@ -137,7 +141,7 @@ func (h *Holmes) startDumpLoop() {
 	}
 }
 
-// goroutine start
+// goroutine start.
 func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	if !h.opts.GrOpts.Enable {
 		return
@@ -171,7 +175,7 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 	return true
 }
 
-// memory start
+// memory start.
 func (h *Holmes) memCheckAndDump(mem int) {
 	if !h.opts.MemOpts.Enable {
 		return
@@ -205,7 +209,7 @@ func (h *Holmes) memProfile(rss int) bool {
 	return true
 }
 
-// cpu start
+// cpu start.
 func (h *Holmes) cpuCheckAndDump(cpu int) {
 	if !h.opts.CPUOpts.Enable {
 		return
@@ -283,7 +287,6 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 			res = trimResult(data)
 		}
 		h.logf(res)
-
 	} else {
 		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil {
@@ -295,5 +298,18 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		if _, err = bf.Write(data.Bytes()); err != nil {
 			h.logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
 		}
+	}
+}
+
+func (h *Holmes) initEnvironment() {
+	// choose whether the max memory is limited by cgroup
+	if h.opts.UseCGroup {
+		// use cgroup
+		getUsage = getUsageCGroup
+		h.logf("[Holmes] use cgroup to limit memory")
+	} else {
+		// not use cgroup
+		getUsage = getUsageNormal
+		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
 }

@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// log write content to log file
+// log write content to log file.
 func (h *Holmes) logf(pattern string, args ...interface{}) {
 	timestamp := "[" + time.Now().Format("2006-01-02 15:04:05.000") + "]"
 	h.writeString(fmt.Sprintf(timestamp+pattern+"\n", args...))
 }
 
-// log write content to log file
+// log write content to log file.
 func (h *Holmes) debugf(pattern string, args ...interface{}) {
 	h.writeString(fmt.Sprintf(pattern+"\n", args...))
 }
