@@ -119,7 +119,7 @@ h, _ := holmes.New(
     holmes.WithTextDump(),
 
     holmes.WithCPUDump(10, 25, 80),
-    holmes.WithCGroup(true),
+    holmes.WithCGroup(true), // set cgroup to true
 )
 ```
 
