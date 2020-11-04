@@ -3,6 +3,7 @@ package holmes
 type ring struct {
 	data   []int
 	idx    int
+	sum    int
 	maxLen int
 }
 
@@ -21,15 +22,18 @@ func (r *ring) push(i int) {
 
 	// no position to write
 	// jump to head
-	if r.idx >= cap(r.data) {
+	if r.idx >= r.maxLen {
 		r.idx = 0
 	}
 
 	// the first round
-	if len(r.data) < cap(r.data) {
+	if len(r.data) < r.maxLen {
+		r.sum += i
 		r.data = append(r.data, i)
 		return
 	}
+
+	r.sum += i - r.data[r.idx]
 
 	// the ring is expanded, just write to the position
 	r.data[r.idx] = i
@@ -37,14 +41,9 @@ func (r *ring) push(i int) {
 }
 
 func (r *ring) avg() int {
-	if r.maxLen == 0 {
+	// Check if the len(r.data) is zero before dividing
+	if r.maxLen == 0 || len(r.data) == 0 {
 		return 0
 	}
-
-	sum := 0
-	for i := 0; i < len(r.data); i++ {
-		sum += r.data[i]
-	}
-
-	return sum / len(r.data)
+	return r.sum / len(r.data)
 }

@@ -9,6 +9,9 @@ import (
 func TestEmptyRing(t *testing.T) {
 	var r = newRing(0)
 	assert.Equal(t, r.avg(), 0)
+
+	r = newRing(1)
+	assert.Equal(t, r.avg(), 0)
 }
 
 func TestRing(t *testing.T) {
