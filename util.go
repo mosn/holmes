@@ -6,9 +6,11 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/shirou/gopsutil/process"
 )
@@ -110,6 +112,25 @@ func getUsageNormal() (float64, float64, int, error) {
 	gNum := runtime.NumGoroutine()
 
 	return cpuPercent, float64(mem), gNum, nil
+}
+
+func getThreadNum() (int, string) {
+	var buf bytes.Buffer
+	pprof.Lookup("threadcreate").WriteTo(&buf, 1)
+
+	l, _ := buf.ReadString('\n')
+	l = strings.TrimSpace(l)
+	var (
+		i            = len(l) - 1
+		threadNumStr string
+	)
+
+	for unicode.IsDigit(rune(l[i])) && i >= 0 {
+		threadNumStr = string([]byte{l[i]}) + threadNumStr
+		i--
+	}
+	threadNum, _ := strconv.ParseInt(threadNumStr, 10, 64)
+	return int(threadNum), buf.String()
 }
 
 var getUsage func() (float64, float64, int, error)
