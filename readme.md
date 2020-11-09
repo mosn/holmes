@@ -258,7 +258,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 See this [example](example/cpu_explode.go).
 
-After warming up finished, curl localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
+After warming up finished, curl http://localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
 
 Notice the cpu profile currently doesn't support text mode.
 
