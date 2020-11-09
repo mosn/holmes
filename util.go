@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/shirou/gopsutil/process"
 )
@@ -54,15 +53,15 @@ func trimResult(buffer bytes.Buffer) string {
 
 // return cpu percent, mem in MB, goroutine num
 // cgroup ver.
-func getUsageCGroup() (float64, float64, int, error) {
+func getUsageCGroup() (float64, float64, int, int, error) {
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	cpuPercent, err := p.Percent(time.Second)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	// the same with physical machine
@@ -71,32 +70,35 @@ func getUsageCGroup() (float64, float64, int, error) {
 
 	mem, err := p.MemoryInfo()
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	memLimit, err := readUint(cgroupMemLimitPath)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	// mem.RSS / cgroup limit in bytes
 	memPercent := float64(mem.RSS) * 100 / float64(memLimit)
 
 	gNum := runtime.NumGoroutine()
-	return cpuPercent, memPercent, gNum, nil
+
+	tNum := getThreadNum()
+
+	return cpuPercent, memPercent, gNum, tNum, nil
 }
 
 // return cpu percent, mem in MB, goroutine num
 // not use cgroup ver.
-func getUsageNormal() (float64, float64, int, error) {
+func getUsageNormal() (float64, float64, int, int, error) {
 	p, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	cpuPercent, err := p.Percent(time.Second)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	// The default percent is if you use one core, then 100%, two core, 200%
@@ -106,43 +108,30 @@ func getUsageNormal() (float64, float64, int, error) {
 
 	mem, err := p.MemoryPercent()
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
 	gNum := runtime.NumGoroutine()
 
-	return cpuPercent, float64(mem), gNum, nil
+	tNum := getThreadNum()
+
+	return cpuPercent, float64(mem), gNum, tNum, nil
 }
 
-func getThreadNum() (int, string) {
-	var buf bytes.Buffer
-	pprof.Lookup("threadcreate").WriteTo(&buf, 1)
-
-	l, _ := buf.ReadString('\n')
-	l = strings.TrimSpace(l)
-	var (
-		i            = len(l) - 1
-		threadNumStr string
-	)
-
-	for unicode.IsDigit(rune(l[i])) && i >= 0 {
-		threadNumStr = string([]byte{l[i]}) + threadNumStr
-		i--
-	}
-	threadNum, _ := strconv.ParseInt(threadNumStr, 10, 64)
-	return int(threadNum), buf.String()
+func getThreadNum() int {
+	return pprof.Lookup("threadcreate").Count()
 }
 
-var getUsage func() (float64, float64, int, error)
+var getUsage func() (float64, float64, int, int, error)
 
 // cpu mem goroutine err.
-func collect() (int, int, int, error) {
-	cpu, mem, gNum, err := getUsage()
+func collect() (int, int, int, int, error) {
+	cpu, mem, gNum, tNum, err := getUsage()
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 
-	return int(cpu), int(mem), gNum, nil
+	return int(cpu), int(mem), gNum, tNum, nil
 }
 
 func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff int) bool {

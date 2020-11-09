@@ -14,20 +14,23 @@ type Holmes struct {
 	opts *options
 
 	// stats
-	collectCount    int
-	cpuTriggerCount int
-	memTriggerCount int
-	grTriggerCount  int
+	collectCount       int
+	threadTriggerCount int
+	cpuTriggerCount    int
+	memTriggerCount    int
+	grTriggerCount     int
 
 	// cooldown
-	cpuCoolDownTime time.Time
-	memCoolDownTime time.Time
-	grCoolDownTime  time.Time
+	threadCoolDownTime time.Time
+	cpuCoolDownTime    time.Time
+	memCoolDownTime    time.Time
+	grCoolDownTime     time.Time
 
 	// stats ring
-	memStats   ring
-	cpuStats   ring
-	grNumStats ring
+	memStats    ring
+	cpuStats    ring
+	grNumStats  ring
+	threadStats ring
 
 	// switch
 	stopped int64
@@ -107,6 +110,7 @@ func (h *Holmes) startDumpLoop() {
 	h.cpuStats = newRing(minCollectCyclesBeforeDumpStart)
 	h.memStats = newRing(minCollectCyclesBeforeDumpStart)
 	h.grNumStats = newRing(minCollectCyclesBeforeDumpStart)
+	h.threadStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	// dump loop
 	ticker := time.NewTicker(h.opts.CollectInterval)
@@ -117,7 +121,7 @@ func (h *Holmes) startDumpLoop() {
 			return
 		}
 
-		cpu, mem, gNum, err := collect()
+		cpu, mem, gNum, tNum, err := collect()
 		if err != nil {
 			h.logf(err.Error())
 			continue
@@ -126,6 +130,7 @@ func (h *Holmes) startDumpLoop() {
 		h.cpuStats.push(cpu)
 		h.memStats.push(mem)
 		h.grNumStats.push(gNum)
+		h.threadStats.push(tNum)
 
 		h.collectCount++
 		if h.collectCount < minCollectCyclesBeforeDumpStart {
@@ -209,6 +214,43 @@ func (h *Holmes) memProfile(rss int) bool {
 	return true
 }
 
+// thread start.
+func (h *Holmes) threadCheckAndDump(threadNum int) {
+	if !h.opts.ThreadOpts.Enable {
+		return
+	}
+
+	if h.threadCoolDownTime.After(time.Now()) {
+		h.logf("[Holmes] thread dump is in cooldown")
+		return
+	}
+
+	if triggered := h.threadProfile(threadNum); triggered {
+		h.threadCoolDownTime = time.Now().Add(h.opts.CoolDown)
+		h.threadTriggerCount++
+	}
+}
+
+func (h *Holmes) threadProfile(curThreadNum int) bool {
+	c := h.opts.ThreadOpts
+	if !matchRule(h.cpuStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff) {
+		// let user know why this should not dump
+		h.debugf("[Holmes] NODUMP thread, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
+			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs,
+			h.threadStats.data, curThreadNum)
+
+		return false
+	}
+
+	var buf bytes.Buffer
+	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	h.writeProfileDataToFile(buf, thread, curThreadNum)
+
+	return true
+}
+
+// thread end.
+
 // cpu start.
 func (h *Holmes) cpuCheckAndDump(cpu int) {
 	if !h.opts.CPUOpts.Enable {
@@ -278,6 +320,12 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 			type2name[dumpType], opts.GoroutineTriggerNumMin,
 			opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs,
 			h.grNumStats.data, currentStat)
+	case thread:
+		opts := h.opts.ThreadOpts
+		h.logf("[Holmes] pprof %v, config_min : %v, config_diff : %v, config_abs : %v,  previous : %v, current : %v",
+			type2name[dumpType], opts.ThreadTriggerPercentMin,
+			opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs,
+			h.threadStats.data, currentStat)
 	}
 
 	if h.opts.DumpProfileType == textDump {
