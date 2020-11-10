@@ -27,9 +27,10 @@ type options struct {
 	// the cpu/mem/goroutine have different cooldowns of their own
 	CoolDown time.Duration
 
-	GrOpts  *grOptions
-	MemOpts *memOptions
-	CPUOpts *cpuOptions
+	GrOpts     *grOptions
+	MemOpts    *memOptions
+	CPUOpts    *cpuOptions
+	ThreadOpts *threadOptions
 }
 
 // Option holmes option type.
@@ -48,6 +49,7 @@ func newOptions() *options {
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
+		ThreadOpts:      newThreadOptions(),
 		Logger:          os.Stdout,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
@@ -163,6 +165,32 @@ func WithMemDump(min int, diff int, abs int) Option {
 		opts.MemOpts.MemTriggerPercentMin = min
 		opts.MemOpts.MemTriggerPercentDiff = diff
 		opts.MemOpts.MemTriggerPercentAbs = abs
+		return
+	})
+}
+
+type threadOptions struct {
+	Enable                   bool
+	ThreadTriggerPercentMin  int // thread trigger min in number
+	ThreadTriggerPercentDiff int // thread trigger diff in percent
+	ThreadTriggerPercentAbs  int // thread trigger abs in number
+}
+
+func newThreadOptions() *threadOptions {
+	return &threadOptions{
+		Enable:                   false,
+		ThreadTriggerPercentAbs:  defaultCPUTriggerAbs,
+		ThreadTriggerPercentDiff: defaultCPUTriggerDiff,
+		ThreadTriggerPercentMin:  defaultCPUTriggerMin,
+	}
+}
+
+// WithThreadDump set the thread dump options.
+func WithThreadDump(min, diff, abs int) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.ThreadOpts.ThreadTriggerPercentMin = min
+		opts.ThreadOpts.ThreadTriggerPercentDiff = diff
+		opts.ThreadOpts.ThreadTriggerPercentAbs = abs
 		return
 	})
 }

@@ -1,7 +1,5 @@
 # holmes
 
-[中文版](./readme_cn.md)
-
 **WARNING** : holmes is under heavy development now, so API will make breaking change during dev. If you want to use it in production, please wait for the first release.
 
 Self-aware Golang profile dumper.
@@ -258,7 +256,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 See this [example](example/cpu_explode.go).
 
-After warming up finished, curl localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
+After warming up finished, curl http://localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
 
 Notice the cpu profile currently doesn't support text mode.
 
@@ -311,4 +309,54 @@ So we find out the criminal.
 
 ### large thread allocation caused by cgo block 
 
-Will be supported in the future
+See this [example](./example/thread_trigger.go)
+
+This is a cgo block example, massive cgo blocking will cause many threads created.
+
+After warming up, curl http://localhost:10003/leak, then the thread profile and goroutine profile will be dump to dumpPath:
+
+```
+[2020-11-10 19:49:52.145][Holmes] pprof thread, config_min : 10, config_diff : 25, config_abs : 100,  previous : [8 8 8 8 8 8 8 8 8 1013], current : 1013
+[2020-11-10 19:49:52.146]threadcreate profile: total 1013
+1012 @
+#	0x0
+
+1 @ 0x403af6e 0x403b679 0x4037e34 0x4037e35 0x40677d1
+#	0x403af6d	runtime.allocm+0x14d			/Users/xargin/sdk/go1.14.2/src/runtime/proc.go:1390
+#	0x403b678	runtime.newm+0x38			/Users/xargin/sdk/go1.14.2/src/runtime/proc.go:1704
+#	0x4037e33	runtime.startTemplateThread+0x2c3	/Users/xargin/sdk/go1.14.2/src/runtime/proc.go:1768
+#	0x4037e34	runtime.main+0x2c4			/Users/xargin/sdk/go1.14.2/src/runtime/proc.go:186
+
+goroutine profile: total 1002
+999 @ 0x4004f8b 0x4394a61 0x4394f79 0x40677d1
+#	0x4394a60	main._Cfunc_output+0x40	_cgo_gotypes.go:70
+#	0x4394f78	main.leak.func1.1+0x48	/Users/xargin/go/src/github.com/mosn/holmes/example/thread_trigger.go:45
+
+1 @ 0x4038160 0x40317ca 0x4030d35 0x40c6555 0x40c8db4 0x40c8d96 0x41a8f92 0x41c2a52 0x41c1894 0x42d00cd 0x42cfe17 0x4394c57 0x4394c20 0x4037d82 0x40677d1
+#	0x4030d34	internal/poll.runtime_pollWait+0x54		/Users/xargin/sdk/go1.14.2/src/runtime/netpoll.go:203
+#	0x40c6554	internal/poll.(*pollDesc).wait+0x44		/Users/xargin/sdk/go1.14.2/src/internal/poll/fd_poll_runtime.go:87
+#	0x40c8db3	internal/poll.(*pollDesc).waitRead+0x1d3	/Users/xargin/sdk/go1.14.2/src/internal/poll/fd_poll_runtime.go:92
+#	0x40c8d95	internal/poll.(*FD).Accept+0x1b5		/Users/xargin/sdk/go1.14.2/src/internal/poll/fd_unix.go:384
+#	0x41a8f91	net.(*netFD).accept+0x41			/Users/xargin/sdk/go1.14.2/src/net/fd_unix.go:238
+#	0x41c2a51	net.(*TCPListener).accept+0x31			/Users/xargin/sdk/go1.14.2/src/net/tcpsock_posix.go:139
+#	0x41c1893	net.(*TCPListener).Accept+0x63			/Users/xargin/sdk/go1.14.2/src/net/tcpsock.go:261
+#	0x42d00cc	net/http.(*Server).Serve+0x25c			/Users/xargin/sdk/go1.14.2/src/net/http/server.go:2901
+#	0x42cfe16	net/http.(*Server).ListenAndServe+0xb6		/Users/xargin/sdk/go1.14.2/src/net/http/server.go:2830
+#	0x4394c56	net/http.ListenAndServe+0x96			/Users/xargin/sdk/go1.14.2/src/net/http/server.go:3086
+#	0x4394c1f	main.main+0x5f					/Users/xargin/go/src/github.com/mosn/holmes/example/thread_trigger.go:55
+#	0x4037d81	runtime.main+0x211				/Users/xargin/sdk/go1.14.2/src/runtime/proc.go:203
+
+1 @ 0x4038160 0x4055bea 0x4394ead 0x40677d1
+#	0x4055be9	time.Sleep+0xb9		/Users/xargin/sdk/go1.14.2/src/runtime/time.go:188
+#	0x4394eac	main.init.0.func1+0x1dc	/Users/xargin/go/src/github.com/mosn/holmes/example/thread_trigger.go:34
+
+1 @ 0x43506d5 0x43504f0 0x434d28a 0x4391872 0x43914cf 0x43902c2 0x40677d1
+#	0x43506d4	runtime/pprof.writeRuntimeProfile+0x94				/Users/xargin/sdk/go1.14.2/src/runtime/pprof/pprof.go:694
+#	0x43504ef	runtime/pprof.writeGoroutine+0x9f				/Users/xargin/sdk/go1.14.2/src/runtime/pprof/pprof.go:656
+#	0x434d289	runtime/pprof.(*Profile).WriteTo+0x3d9				/Users/xargin/sdk/go1.14.2/src/runtime/pprof/pprof.go:329
+#	0x4391871	github.com/mosn/holmes.(*Holmes).threadProfile+0x2e1		/Users/xargin/go/src/github.com/mosn/holmes/holmes.go:260
+#	0x43914ce	github.com/mosn/holmes.(*Holmes).threadCheckAndDump+0x9e	/Users/xargin/go/src/github.com/mosn/holmes/holmes.go:241
+#	0x43902c1	github.com/mosn/holmes.(*Holmes).startDumpLoop+0x571		/Users/xargin/go/src/github.com/mosn/holmes/holmes.go:158
+```
+
+So we know that the threads are blocked by cgo calls.

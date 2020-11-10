@@ -6,6 +6,10 @@ import (
 )
 
 const (
+	defaultThreadTriggerMin  = 10 // 10 threads
+	defaultThreadTriggerAbs  = 70 // 70 threads
+	defaultThreadTriggerDiff = 25 // 25%
+
 	defaultCPUTriggerMin   = 10              // 10%
 	defaultCPUTriggerAbs   = 70              // 70%
 	defaultCPUTriggerDiff  = 25              // 25%
@@ -40,12 +44,14 @@ type configureType int
 const (
 	mem configureType = iota
 	cpu
+	thread
 	goroutine
 )
 
 var type2name = map[configureType]string{
 	mem:       "mem",
 	cpu:       "cpu",
+	thread:    "thread",
 	goroutine: "goroutine",
 }
 
