@@ -49,6 +49,7 @@ func newOptions() *options {
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
+		ThreadOpts:      newThreadOptions(),
 		Logger:          os.Stdout,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
@@ -170,9 +171,9 @@ func WithMemDump(min int, diff int, abs int) Option {
 
 type threadOptions struct {
 	Enable                   bool
-	ThreadTriggerPercentMin  int // cpu trigger min in percent
-	ThreadTriggerPercentDiff int // cpu trigger diff in percent
-	ThreadTriggerPercentAbs  int // cpu trigger abs inpercent
+	ThreadTriggerPercentMin  int // thread trigger min in number
+	ThreadTriggerPercentDiff int // thread trigger diff in percent
+	ThreadTriggerPercentAbs  int // thread trigger abs in number
 }
 
 func newThreadOptions() *threadOptions {

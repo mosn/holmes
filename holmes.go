@@ -51,6 +51,18 @@ func New(opts ...Option) (*Holmes, error) {
 	return holmes, nil
 }
 
+// EnableThreadDump enables the goroutine dump.
+func (h *Holmes) EnableThreadDump() *Holmes {
+	h.opts.ThreadOpts.Enable = true
+	return h
+}
+
+// DisableThreadDump disables the goroutine dump.
+func (h *Holmes) DisableThreadDump() *Holmes {
+	h.opts.ThreadOpts.Enable = false
+	return h
+}
+
 // EnableGoroutineDump enables the goroutine dump.
 func (h *Holmes) EnableGoroutineDump() *Holmes {
 	h.opts.GrOpts.Enable = true
@@ -143,6 +155,7 @@ func (h *Holmes) startDumpLoop() {
 		h.goroutineCheckAndDump(gNum)
 		h.memCheckAndDump(mem)
 		h.cpuCheckAndDump(cpu)
+		h.threadCheckAndDump(tNum)
 	}
 }
 
@@ -233,7 +246,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 
 func (h *Holmes) threadProfile(curThreadNum int) bool {
 	c := h.opts.ThreadOpts
-	if !matchRule(h.cpuStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff) {
+	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff) {
 		// let user know why this should not dump
 		h.debugf("[Holmes] NODUMP thread, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
 			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs,
@@ -243,7 +256,9 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 	}
 
 	var buf bytes.Buffer
-	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
+
 	h.writeProfileDataToFile(buf, thread, curThreadNum)
 
 	return true
