@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	defaultThreadTriggerMin  = 10 // 10%
-	defaultThreadTriggerAbs  = 70 // 70%
+	defaultThreadTriggerMin  = 10 // 10 threads
+	defaultThreadTriggerAbs  = 70 // 70 threads
 	defaultThreadTriggerDiff = 25 // 25%
 
 	defaultCPUTriggerMin   = 10              // 10%
