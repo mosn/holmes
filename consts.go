@@ -60,6 +60,6 @@ const cgroupMemLimitPath = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 const minCollectCyclesBeforeDumpStart = 10
 
 const (
-	LogLevelDebug = iota
-	LogLevelInfo
+	LogLevelInfo = iota
+	LogLevelDebug
 )
