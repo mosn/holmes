@@ -58,3 +58,8 @@ var type2name = map[configureType]string{
 const cgroupMemLimitPath = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 
 const minCollectCyclesBeforeDumpStart = 10
+
+const (
+	LogLevelInfo = iota
+	LogLevelDebug
+)

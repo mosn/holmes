@@ -3,6 +3,7 @@ package holmes
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -17,7 +18,8 @@ type options struct {
 	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
 	DumpFullStack bool
 
-	Logger *os.File
+	LogLevel int
+	Logger   *os.File
 
 	// interval for dump loop, default 5s
 	CollectInterval time.Duration
@@ -50,6 +52,7 @@ func newOptions() *options {
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
 		ThreadOpts:      newThreadOptions(),
+		LogLevel:        LogLevelDebug,
 		Logger:          os.Stdout,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
@@ -78,10 +81,23 @@ func WithCoolDown(coolDown string) Option {
 }
 
 // WithDumpPath set the dump path for holmes.
-func WithDumpPath(dumpPath string) Option {
+func WithDumpPath(dumpPath string, loginfo ...string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.DumpPath = dumpPath
-		opts.Logger, err = os.OpenFile(path.Join(dumpPath, defaultLoggerName), defaultLoggerFlags, defaultLoggerPerm)
+		f := path.Join(dumpPath, defaultLoggerName)
+		if len(loginfo) > 0 {
+			f = dumpPath + "/" + path.Join(loginfo...)
+		}
+		opts.DumpPath = filepath.Dir(f)
+		opts.Logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+		if err != nil && os.IsNotExist(err) {
+			if err = os.MkdirAll(opts.DumpPath, 0755); err != nil {
+				return
+			}
+			opts.Logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+			if err != nil {
+				return
+			}
+		}
 		return
 	})
 }
@@ -228,6 +244,13 @@ func WithCPUDump(min int, diff int, abs int) Option {
 func WithCGroup(useCGroup bool) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.UseCGroup = useCGroup
+		return
+	})
+}
+
+func WithLoggerLevel(level int) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.LogLevel = level
 		return
 	})
 }
