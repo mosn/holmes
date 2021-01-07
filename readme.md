@@ -4,7 +4,7 @@
 
 Self-aware Golang profile dumper.
 
-Our online system often crashes(mostly killed by OOM) in the midnight, as a lazy developer, we don't want to wake up at night and wait for the online bug to reproduce.
+Our online system often crashes at midnight (usually killed by the OS due to OOM). As lazy developers, we don't want to be woken up at midnight and waiting for the online error to recur.
 
 holmes comes to rescue.
 
