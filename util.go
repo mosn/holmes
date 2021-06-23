@@ -65,8 +65,8 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 	}
 
 	// the same with physical machine
-	// need to divide by core
-	cpuPercent = cpuPercent / float64(runtime.GOMAXPROCS(-1))
+	// need to divide by core number
+	cpuPercent = cpuPercent / float64(runtime.NumCPU())
 
 	mem, err := p.MemoryInfo()
 	if err != nil {
@@ -101,10 +101,10 @@ func getUsageNormal() (float64, float64, int, int, error) {
 		return 0, 0, 0, 0, err
 	}
 
-	// The default percent is if you use one core, then 100%, two core, 200%
+	// The default percent is from all cores, use runtime.NumCPU()
 	// but it's inconvenient to calculate the proper percent
-	// here we multiply by core number, so we can set a percent bar more intuitively
-	cpuPercent = cpuPercent / float64(runtime.GOMAXPROCS(-1))
+	// here we divide by core number, so we can set a percent bar more intuitively
+	cpuPercent = cpuPercent / float64(runtime.NumCPU())
 
 	mem, err := p.MemoryPercent()
 	if err != nil {
