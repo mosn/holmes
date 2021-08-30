@@ -12,7 +12,6 @@ func init() {
 	go http.ListenAndServe(":10003", nil)
 }
 
-
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCollectInterval("2s"),

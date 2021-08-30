@@ -256,8 +256,8 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 	}
 
 	var buf bytes.Buffer
-	pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
+	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
 
 	h.writeProfileDataToFile(buf, thread, curThreadNum)
 

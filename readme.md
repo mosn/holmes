@@ -141,7 +141,7 @@ When you get warning messages sent by your own monitor system, eg. memory usage 
 
 ### RSS peak caused by make a 1GB slice
 
-see this [example](example/1gbslice.go)
+see this [example](example/1gbslice/1gbslice.go)
 
 after warming up, just curl http://localhost:10003/make1gb for some times, then you'll probably see:
 
@@ -159,7 +159,7 @@ heap profile: 0: 0 [1: 1073741824] @ heap/1048576
 
 ### goroutine explosion caused by deadlock
 
-See this [example](./example/deadlock.go)
+See this [example](./example/deadlock/deadlock.go)
 
 curl localhost:10003/lockorder1
 
@@ -205,7 +205,7 @@ Your should set DumpFullStack to true to locate deadlock bug.
 
 ### goroutine explosion caused by channel block
 
-see this [example](example/channelblock.go)
+see this [example](example/channelblock/channelblock.go)
 
 after warming up, just  wrk -c100 http://localhost:10003/chanblock
 
@@ -223,7 +223,7 @@ It's easy to locate.
 
 ### process slowly leaks goroutines
 
-See this [example](example/slowlyleak.go)
+See this [example](example/slowlyleak/slowlyleak.go)
 
 The producer forget to close the task channel after produce finishes, so every request to this URI will leak a goroutine, we could curl http://localhost:10003/leak several time and got the following log:
 
@@ -237,7 +237,7 @@ It's easy to find the leakage reason
 
 ### large memory allocation caused by business logic
 
-See this [example](example/alloc.go), this is a similar example as the large slice make.
+See this [example](example/alloc/alloc.go), this is a similar example as the large slice make.
 
 After warming up finished,  wrk -c100 http://localhost:10003/alloc:
 
@@ -254,7 +254,7 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 ### deadloop caused cpu outage
 
-See this [example](example/cpu_explode.go).
+See this [example](example/cpu_explode/cpu_explode.go).
 
 After warming up finished, curl http://localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
 
@@ -309,7 +309,7 @@ So we find out the criminal.
 
 ### large thread allocation caused by cgo block 
 
-See this [example](./example/thread_trigger.go)
+See this [example](./example/thread_trigger/thread_trigger.go)
 
 This is a cgo block example, massive cgo blocking will cause many threads created.
 
