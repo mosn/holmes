@@ -64,10 +64,20 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 		return 0, 0, 0, 0, err
 	}
 
+	cpuPeriod, err := readUint(cgroupCpuPeriodPath)
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	cpuQuota, err := readUint(cgroupCpuQuotaPath)
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	cpuCore := float64(cpuQuota) / float64(cpuPeriod)
+
 	// the same with physical machine
 	// need to divide by core number
-	cpuPercent = cpuPercent / float64(runtime.NumCPU())
-
+	cpuPercent = cpuPercent / cpuCore
 	mem, err := p.MemoryInfo()
 	if err != nil {
 		return 0, 0, 0, 0, err

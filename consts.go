@@ -55,7 +55,11 @@ var type2name = map[configureType]string{
 	goroutine: "goroutine",
 }
 
-const cgroupMemLimitPath = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
+const (
+	cgroupMemLimitPath  = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
+	cgroupCpuQuotaPath  = "/sys/fs/cgroup/cpuacct/cpu.cfs_quota_us"
+	cgroupCpuPeriodPath = "/sys/fs/cgroup/cpuacct/cpu.cfs_period_us"
+)
 
 const minCollectCyclesBeforeDumpStart = 10
 
