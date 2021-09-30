@@ -2,7 +2,6 @@ package holmes
 
 import (
 	"bytes"
-	"context"
 	"io/ioutil"
 	"math"
 	"os"
@@ -82,6 +81,7 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 	// need to divide by core number
 	cpuPercent = cpuPercent / cpuCore
 	mem, err := p.MemoryInfo()
+	p.MemoryPercent()
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -105,7 +105,7 @@ func getCGroupMemoryLimit() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	machineMemory, err := mem_util.VirtualMemoryWithContext(context.TODO())
+	machineMemory, err := mem_util.VirtualMemory()
 	if err != nil {
 		return 0, err
 	}
