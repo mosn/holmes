@@ -3,6 +3,7 @@ package holmes
 import (
 	"bytes"
 	"io/ioutil"
+	"math"
 	"os"
 	"path"
 	"runtime"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	mem_util "github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -79,15 +81,15 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 	// need to divide by core number
 	cpuPercent = cpuPercent / cpuCore
 	mem, err := p.MemoryInfo()
+	p.MemoryPercent()
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
 
-	memLimit, err := readUint(cgroupMemLimitPath)
+	memLimit, err := getCGroupMemoryLimit()
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
-
 	// mem.RSS / cgroup limit in bytes
 	memPercent := float64(mem.RSS) * 100 / float64(memLimit)
 
@@ -96,6 +98,19 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 	tNum := getThreadNum()
 
 	return cpuPercent, memPercent, gNum, tNum, nil
+}
+
+func getCGroupMemoryLimit() (uint64, error) {
+	usage, err := readUint(cgroupMemLimitPath)
+	if err != nil {
+		return 0, err
+	}
+	machineMemory, err := mem_util.VirtualMemory()
+	if err != nil {
+		return 0, err
+	}
+	limit := uint64(math.Min(float64(usage), float64(machineMemory.Total)))
+	return limit, nil
 }
 
 // return cpu percent, mem in MB, goroutine num
