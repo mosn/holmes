@@ -33,7 +33,7 @@ h.Stop()
 * WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
 * WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
 * WithTextDump() means not in binary mode, so it's text mode profiles
-* WithGoroutineDump(500, 25, 2000) means dump will happen when current_goroutine_num > 500 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000
+* WithGoroutineDump(10, 25, 2000) means dump will happen when current_goroutine_num > 10 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000
 
 ### dump cpu profile when cpu load spikes
 
