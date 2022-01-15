@@ -1,10 +1,12 @@
 # holmes
 
-**WARNING** : holmes is under heavy development now, so API will make breaking change during dev. If you want to use it in production, please wait for the first release.
+**WARNING** : holmes is under heavy development now, so API will make breaking change during dev. 
+If you want to use it in production, please wait for the first release.
 
 Self-aware Golang profile dumper.
 
-Our online system often crashes at midnight (usually killed by the OS due to OOM). As lazy developers, we don't want to be woken up at midnight and waiting for the online error to recur.
+Our online system often crashes at midnight (usually killed by the OS due to OOM). 
+As lazy developers, we don't want to be woken up at midnight and waiting for the online error to recur.
 
 holmes comes to rescue.
 
@@ -30,10 +32,13 @@ h.Stop()
 ```
 
 * WithCollectInterval("5s") means the system metrics are collected once 5 seconds
-* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown 
+  finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) 
+  will write content to /tmp dir
 * WithTextDump() means not in binary mode, so it's text mode profiles
-* WithGoroutineDump(10, 25, 2000) means dump will happen when current_goroutine_num > 10 && current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000
+* WithGoroutineDump(10, 25, 2000) means dump will happen when current_goroutine_num > 10 && 
+  current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000.
 
 ### dump cpu profile when cpu load spikes
 
@@ -43,6 +48,7 @@ h, _ := holmes.New(
     holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithCPUDump(20, 25, 80),
+    holmes.WithCPUMax(90),
 )
 h.EnableCPUDump()
 
@@ -54,10 +60,16 @@ h.Stop()
 ```
 
 * WithCollectInterval("5s") means the system metrics are collected once 5 seconds
-* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
-* WithBinaryDump() or WithTextDump() doesn't affect the CPU profile dump, because the pprof standard library doesn't support text mode dump
-* WithCPUDump(10, 25, 80) means dump will happen when cpu usage > 10% && cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before 
+  cooldown finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode), or the dump log file(text mode) 
+  will write content to `/tmp` dir.
+* WithBinaryDump() or WithTextDump() doesn't affect the CPU profile dump, because the pprof 
+  standard library doesn't support text mode dump.
+* WithCPUDump(10, 25, 80) means dump will happen when cpu usage > 10% && 
+  cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%.
+* WithCPUMax means holmes would not dump all types profile when current cpu 
+  usage percent is greater than CPUMaxPercent.  
 
 ### dump heap profile when RSS spikes
 
@@ -80,11 +92,14 @@ h.Stop()
 ```
 
 * WithCollectInterval("5s") means the system metrics are collected once 5 seconds
-* WithCoolDown("1m") means once a dump happened, the next dump will not happen before cooldown finish-1 minute.
-* WithDumpPath("/tmp") means the dump binary file(binary mode) or the dump log file(text mode) will write content to /tmp dir
+* WithCoolDown("1m") means once a dump happened, the next dump will not happen before 
+  cooldown finish-1 minute.
+* WithDumpPath("/tmp") means the dump binary file(binary mode), or the dump log file(text mode) 
+  will write content to `/tmp` dir.
 * WithTextDump() means not in binary mode, so it's text mode profiles
-* WithMemDump(30, 25, 80) means dump will happen when memory usage > 10% && memory usage > 125% * previous memory usage or memory usage > 80%
-
+* WithMemDump(30, 25, 80) means dump will happen when memory usage > 10% && 
+  memory usage > 125% * previous memory usage or memory usage > 80%.
+  
 ### enable them all!
 
 It's easy.
@@ -133,11 +148,15 @@ Holmes collects the following stats every interval passed:
 * RSS used by the current process with [gopsutil](https://github.com/shirou/gopsutil)
 * CPU percent a total. eg total 8 core, use 4 core = 50% with [gopsutil](https://github.com/shirou/gopsutil) 
 
-After warming up phase finished, Holmes will compare the current stats with the average of previous collected stats(10 cycles). If the dump rule is matched, Holmes will dump the related profile to log(text mode) or binary file(binary mode).
+After warming up phase finished, Holmes will compare the current stats with the average 
+of previous collected stats(10 cycles). If the dump rule is matched, Holmes will dump 
+the related profile to log(text mode) or binary file(binary mode).
 
-When you get warning messages sent by your own monitor system, eg. memory usage exceed 80%, OOM killed, CPU usage exceed 80%, goroutine nun exceed 100k. The profile is already dumped to your dump path. You could just fetch the profile and see what actually happend without pressure.
+When you get warning messages sent by your own monitor system, e.g, memory usage exceed 80%, 
+OOM killed, CPU usage exceed 80%, goroutine num exceed 100k. The profile is already dumped 
+to your dump path. You could just fetch the profile and see what actually happened without pressure.
 
-## case show
+## cases show
 
 ### RSS peak caused by make a 1GB slice
 
@@ -165,7 +184,8 @@ curl localhost:10003/lockorder1
 
 curl localhost:10003/lockorder2
 
-After warming up, wrk -c 100 http://localhost:10003/req, then you'll see the deadlock caused goroutine num peak:
+After warming up, wrk -c 100 http://localhost:10003/req, then you'll see the deadlock 
+caused goroutine num peak:
 
 ```
 100 @ 0x40380b0 0x4048c80 0x4048c6b 0x40489e7 0x406f72c 0x42badfc 0x42badfd 0x4252b94 0x42549d5 0x4255913 0x4251bcc 0x40659e1
@@ -225,7 +245,9 @@ It's easy to locate.
 
 See this [example](example/slowlyleak/slowlyleak.go)
 
-The producer forget to close the task channel after produce finishes, so every request to this URI will leak a goroutine, we could curl http://localhost:10003/leak several time and got the following log:
+The producer forget to close the task channel after produce finishes, so every request 
+to this URI will leak a goroutine, we could curl http://localhost:10003/leak several 
+time and got the following log:
 
 ```
 goroutine profile: total 10
@@ -256,7 +278,8 @@ heap profile: 83: 374069984 [3300: 14768402720] @ heap/1048576
 
 See this [example](example/cpu_explode/cpu_explode.go).
 
-After warming up finished, curl http://localhost:10003/cpuex several times, then you'll see the cpu profile dump to your dump path.
+After warming up finished, curl http://localhost:10003/cpuex several times, then you'll
+see the cpu profile dump to your dump path.
 
 Notice the cpu profile currently doesn't support text mode.
 
@@ -313,7 +336,8 @@ See this [example](./example/thread_trigger/thread_trigger.go)
 
 This is a cgo block example, massive cgo blocking will cause many threads created.
 
-After warming up, curl http://localhost:10003/leak, then the thread profile and goroutine profile will be dump to dumpPath:
+After warming up, curl http://localhost:10003/leak, then the thread profile and goroutine 
+profile will be dumped to dumpPath:
 
 ```
 [2020-11-10 19:49:52.145][Holmes] pprof thread, config_min : 10, config_diff : 25, config_abs : 100,  previous : [8 8 8 8 8 8 8 8 8 1013], current : 1013

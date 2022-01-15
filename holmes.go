@@ -152,6 +152,11 @@ func (h *Holmes) startDumpLoop() {
 			continue
 		}
 
+		if err := h.EnableDump(cpu); err != nil {
+			h.logf("[Holmes] unable to dump: %v", err)
+			continue
+		}
+
 		h.goroutineCheckAndDump(gNum)
 		h.memCheckAndDump(mem)
 		h.cpuCheckAndDump(cpu)
@@ -382,4 +387,11 @@ func (h *Holmes) initEnvironment() {
 		getUsage = getUsageNormal
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
+}
+
+func (h *Holmes) EnableDump(curCPU int) (err error) {
+	if h.opts.CPUMaxPercent != 0 && curCPU >= h.opts.CPUMaxPercent {
+		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.opts.CPUMaxPercent)
+	}
+	return nil
 }

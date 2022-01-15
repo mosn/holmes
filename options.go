@@ -29,6 +29,11 @@ type options struct {
 	// the cpu/mem/goroutine have different cooldowns of their own
 	CoolDown time.Duration
 
+	// if current cpu usage percent is greater than CPUMaxPercent,
+	// holmes would not dump all types profile, cuz this
+	// move may result of the system crash.
+	CPUMaxPercent int
+
 	GrOpts     *grOptions
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
@@ -76,6 +81,14 @@ func WithCollectInterval(interval string) Option {
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.CoolDown, err = time.ParseDuration(coolDown)
+		return
+	})
+}
+
+// WithCPUMax : set the CPUMaxPercent parameter as max
+func WithCPUMax(max int) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.CPUMaxPercent = max
 		return
 	})
 }
@@ -135,6 +148,7 @@ type grOptions struct {
 	GoroutineTriggerNumMin      int // goroutine trigger min in number
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
 	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
+
 }
 
 func newGrOptions() *grOptions {
@@ -218,7 +232,7 @@ type cpuOptions struct {
 	Enable                bool
 	CPUTriggerPercentMin  int // cpu trigger min in percent
 	CPUTriggerPercentDiff int // cpu trigger diff in percent
-	CPUTriggerPercentAbs  int // cpu trigger abs inpercent
+	CPUTriggerPercentAbs  int // cpu trigger abs in percent
 }
 
 func newCPUOptions() *cpuOptions {
