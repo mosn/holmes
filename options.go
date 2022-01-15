@@ -40,14 +40,6 @@ type options struct {
 	ThreadOpts *threadOptions
 }
 
-func (ops *options) ReachCPUMax(curCPU int) bool {
-	// not set max limit
-	if ops.CPUMaxPercent == 0 {
-		return false
-	}
-	return curCPU >= ops.CPUMaxPercent
-}
-
 // Option holmes option type.
 type Option interface {
 	apply(*options) error
