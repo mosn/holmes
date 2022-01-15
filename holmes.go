@@ -154,7 +154,7 @@ func (h *Holmes) startDumpLoop() {
 
 		if h.opts.ReachCPUMax(cpu) {
 			h.logf("[Holmes] current cpu percent [%v] is greater than the cpu max [%v], don't create profile", cpu, h.opts.CPUMaxPercent)
-			return
+			continue
 		}
 
 		h.goroutineCheckAndDump(gNum)
