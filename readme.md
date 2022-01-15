@@ -21,6 +21,7 @@ h, _ := holmes.New(
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
     holmes.WithGoroutineDump(10, 25, 2000),
+    holems.WithGoroutineNumberMax(100*1000),
 )
 h.EnableGoroutineDump()
 
@@ -39,7 +40,10 @@ h.Stop()
 * WithTextDump() means not in binary mode, so it's text mode profiles
 * WithGoroutineDump(10, 25, 2000) means dump will happen when current_goroutine_num > 10 && 
   current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000.
-
+* WithGoroutineNumberMax(100*1000) means when current goroutines number is greater 100k, holmes would not 
+  dump goroutine profile. Cuz if goroutine num is huge, e.g, 100k goroutine dump will also become a 
+  heavy action: stw && stack dump
+  
 ### dump cpu profile when cpu load spikes
 
 ```go

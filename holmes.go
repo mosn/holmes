@@ -169,7 +169,10 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	if !h.opts.GrOpts.Enable {
 		return
 	}
-
+	if h.opts.GoroutineNumberMax != 0 && gNum >= h.opts.GoroutineNumberMax {
+		h.logf("[Holmes] current goroutine number [%v] is greater than [%v], don't dump", gNum, h.opts.GoroutineNumberMax)
+		return
+	}
 	if h.grCoolDownTime.After(time.Now()) {
 		h.logf("[Holmes] goroutine dump is in cooldown")
 		return

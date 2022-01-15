@@ -34,6 +34,10 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
+	// if current goroutine number is greater than GoroutineNumberMax
+	// holmes would not dump goroutine profile.
+	GoroutineNumberMax int
+
 	GrOpts     *grOptions
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
@@ -81,6 +85,14 @@ func WithCollectInterval(interval string) Option {
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.CoolDown, err = time.ParseDuration(coolDown)
+		return
+	})
+}
+
+// WithGoroutineNumberMax : set GoroutineNumberMax as max
+func WithGoroutineNumberMax(max int) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.GoroutineNumberMax = max
 		return
 	})
 }
