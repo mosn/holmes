@@ -182,11 +182,3 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
-
-func reachCPUMax(curCPU, max int) bool {
-	// not set dangerous limit
-	if max == 0 {
-		return false
-	}
-	return curCPU >= max
-}

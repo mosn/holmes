@@ -30,7 +30,7 @@ type options struct {
 	CoolDown time.Duration
 
 	// if current cpu usage percent is greater than CPUMaxPercent,
-	// holmes would not dump cpu/mem/goroutine type profile, cuz this
+	// holmes would not dump all types profile, cuz this
 	// move may result of the system crash.
 	CPUMaxPercent int
 
@@ -38,6 +38,14 @@ type options struct {
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
 	ThreadOpts *threadOptions
+}
+
+func (ops *options) ReachCPUMax(curCPU int) bool {
+	// not set max limit
+	if ops.CPUMaxPercent == 0 {
+		return false
+	}
+	return curCPU >= ops.CPUMaxPercent
 }
 
 // Option holmes option type.

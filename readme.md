@@ -68,7 +68,7 @@ h.Stop()
   standard library doesn't support text mode dump.
 * WithCPUDump(10, 25, 80) means dump will happen when cpu usage > 10% && 
   cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%.
-* WithCPUMax means holmes would not dump cpu/mem/goroutine types profile when current cpu 
+* WithCPUMax means holmes would not dump all types profile when current cpu 
   usage percent is greater than CPUMaxPercent.  
 
 ### dump heap profile when RSS spikes
