@@ -178,6 +178,10 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 
 func (h *Holmes) goroutineProfile(gNum int) bool {
 	c := h.opts.GrOpts
+	if ReachDangerousLimit(gNum, c.GoroutineDangerousNumber) {
+		h.logf("[Holmes] current goroutines number [%v] greater than dangerous limit [%v], don't create profile", gNum, c.GoroutineDangerousNumber)
+		return false
+	}
 	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff) {
 		h.debugUniform("NODUMP", type2name[goroutine],
 			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
@@ -212,6 +216,10 @@ func (h *Holmes) memCheckAndDump(mem int) {
 
 func (h *Holmes) memProfile(rss int) bool {
 	c := h.opts.MemOpts
+	if ReachDangerousLimit(rss, c.MemDangerousPercent) {
+		h.logf("[Holmes] current mem percent [%v] greater than dangerous limit [%v], don't create profile", rss, c.MemDangerousPercent)
+		return false
+	}
 	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff) {
 		// let user know why this should not dump
 		h.debugUniform("NODUMP", type2name[mem],
@@ -285,6 +293,10 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	c := h.opts.CPUOpts
+	if ReachDangerousLimit(curCPUUsage, c.CPUDangerousPercent) {
+		h.logf("[Holmes] current cpu percent [%v] greater than dangerous limit [%v], don't create profile", curCPUUsage, c.CPUDangerousPercent)
+		return false
+	}
 	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff) {
 		// let user know why this should not dump
 		h.debugUniform("NODUMP", type2name[cpu],
