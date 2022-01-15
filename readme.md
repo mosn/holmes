@@ -21,7 +21,6 @@ h, _ := holmes.New(
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
     holmes.WithGoroutineDump(10, 25, 2000),
-    holmes.WithGoroutinesDangerousNumber(100*10000)
 )
 h.EnableGoroutineDump()
 
@@ -40,8 +39,6 @@ h.Stop()
 * WithTextDump() means not in binary mode, so it's text mode profiles
 * WithGoroutineDump(10, 25, 2000) means dump will happen when current_goroutine_num > 10 && 
   current_goroutine_num > 125% * previous_average_goroutine_num or current_goroutine_num > 2000.
-* WithGoroutinesDangerousNumber means holmes would not dump profile if current goroutine numbers
-  is greater than DangerousNumber.
 
 ### dump cpu profile when cpu load spikes
 
@@ -51,7 +48,7 @@ h, _ := holmes.New(
     holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithCPUDump(20, 25, 80),
-    holmes.WithCPUDangerousPercent(90),
+    holmes.WithCPUMax(90),
 )
 h.EnableCPUDump()
 
@@ -71,8 +68,8 @@ h.Stop()
   standard library doesn't support text mode dump.
 * WithCPUDump(10, 25, 80) means dump will happen when cpu usage > 10% && 
   cpu usage > 125% * previous cpu usage recorded or cpu usage > 80%.
-* WithCPUDangerousPercent means holmes would not dump profile if current cpu usage percent
-  is greater than DangerousNumber.  
+* WithCPUMax means holmes would not dump cpu/mem/goroutine types profile when current cpu 
+  usage percent is greater than CPUMaxPercent.  
 
 ### dump heap profile when RSS spikes
 
@@ -83,7 +80,6 @@ h, _ := holmes.New(
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
     holmes.WithMemDump(30, 25, 80),
-    holmes.WithMemDangerousPercent(90)
 )
 
 h.EnableMemDump()
@@ -103,8 +99,6 @@ h.Stop()
 * WithTextDump() means not in binary mode, so it's text mode profiles
 * WithMemDump(30, 25, 80) means dump will happen when memory usage > 10% && 
   memory usage > 125% * previous memory usage or memory usage > 80%.
-* WithMemDangerousPercent means holmes would not dump profile if current Mem usage percent
-  is greater than DangerousPercent.
   
 ### enable them all!
 

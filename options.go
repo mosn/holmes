@@ -1,7 +1,6 @@
 package holmes
 
 import (
-	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,6 +28,11 @@ type options struct {
 	// interval for cooldown，default 1m
 	// the cpu/mem/goroutine have different cooldowns of their own
 	CoolDown time.Duration
+
+	// if current cpu usage percent is greater than CPUMaxPercent,
+	// holmes would not dump cpu/mem/goroutine type profile, cuz this
+	// move may result of the system crash.
+	CPUMaxPercent int
 
 	GrOpts     *grOptions
 	MemOpts    *memOptions
@@ -81,35 +85,10 @@ func WithCoolDown(coolDown string) Option {
 	})
 }
 
-// WithCPUDangerousPercent : set the CPU dangerousLimit parameter as d
-func WithCPUDangerousPercent(d int) Option {
+// WithCPUMax : set the CPUMaxPercent parameter as max
+func WithCPUMax(max int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		if opts.CPUOpts == nil {
-			return errors.New("CPU option is nil, initial cpu option before setting dangerous limit")
-		}
-		opts.CPUOpts.CPUDangerousPercent = d
-		return
-	})
-}
-
-// WithMemDangerousPercent : set the Mem dangerousLimit parameter as d
-func WithMemDangerousPercent(d int) Option {
-	return optionFunc(func(opts *options) (err error) {
-		if opts.MemOpts == nil {
-			return errors.New("memory option is nil, initial cpu option before setting dangerous limit")
-		}
-		opts.MemOpts.MemDangerousPercent = d
-		return
-	})
-}
-
-// WithGoroutinesDangerousNumber : set the Goroutines dangerousLimit num as d
-func WithGoroutinesDangerousNumber(d int) Option {
-	return optionFunc(func(opts *options) (err error) {
-		if opts.GrOpts == nil {
-			return errors.New("goroutines num option is nil, initial cpu option before setting dangerous limit")
-		}
-		opts.GrOpts.GoroutineDangerousNumber = d
+		opts.CPUMaxPercent = max
 		return
 	})
 }
@@ -170,9 +149,6 @@ type grOptions struct {
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
 	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
 
-	// if current goroutine number is greater than GoroutineDangerousNumber,
-	// holmes would not dump profile, cuz this move may result of the system crash.
-	GoroutineDangerousNumber int
 }
 
 func newGrOptions() *grOptions {
@@ -202,10 +178,6 @@ type memOptions struct {
 	MemTriggerPercentMin  int // mem trigger minimum in percent
 	MemTriggerPercentDiff int // mem trigger diff in percent
 	MemTriggerPercentAbs  int // mem trigger absolute in percent
-
-	// if current Mem usage percent is greater than MemDangerousPercent,
-	// holmes would not dump profile, cuz this move may result of the system crash.
-	MemDangerousPercent int
 }
 
 func newMemOptions() *memOptions {
@@ -261,10 +233,6 @@ type cpuOptions struct {
 	CPUTriggerPercentMin  int // cpu trigger min in percent
 	CPUTriggerPercentDiff int // cpu trigger diff in percent
 	CPUTriggerPercentAbs  int // cpu trigger abs in percent
-
-	// if current cpu usage percent is greater than CPUDangerousPercent,
-	// holmes would not dump profile, cuz this move may result of the system crash.
-	CPUDangerousPercent int
 }
 
 func newCPUOptions() *cpuOptions {

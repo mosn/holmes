@@ -152,15 +152,15 @@ func (h *Holmes) startDumpLoop() {
 			continue
 		}
 
-		h.goroutineCheckAndDump(gNum)
-		h.memCheckAndDump(mem)
+		h.goroutineCheckAndDump(gNum, cpu)
+		h.memCheckAndDump(mem, cpu)
 		h.cpuCheckAndDump(cpu)
 		h.threadCheckAndDump(tNum)
 	}
 }
 
 // goroutine start.
-func (h *Holmes) goroutineCheckAndDump(gNum int) {
+func (h *Holmes) goroutineCheckAndDump(gNum, curCpu int) {
 	if !h.opts.GrOpts.Enable {
 		return
 	}
@@ -170,16 +170,16 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 
-	if triggered := h.goroutineProfile(gNum); triggered {
+	if triggered := h.goroutineProfile(gNum, curCpu); triggered {
 		h.grCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.grTriggerCount++
 	}
 }
 
-func (h *Holmes) goroutineProfile(gNum int) bool {
+func (h *Holmes) goroutineProfile(gNum, curCpu int) bool {
 	c := h.opts.GrOpts
-	if ReachDangerousLimit(gNum, c.GoroutineDangerousNumber) {
-		h.logf("[Holmes] current goroutines number [%v] greater than dangerous limit [%v], don't create profile", gNum, c.GoroutineDangerousNumber)
+	if reachCPUMax(curCpu, h.opts.CPUMaxPercent) {
+		h.logf("[Holmes] current cpu percent [%v] greater than the cpu max [%v], don't create profile", curCpu, h.opts.CPUMaxPercent)
 		return false
 	}
 	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff) {
@@ -198,7 +198,7 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 }
 
 // memory start.
-func (h *Holmes) memCheckAndDump(mem int) {
+func (h *Holmes) memCheckAndDump(mem, curCpu int) {
 	if !h.opts.MemOpts.Enable {
 		return
 	}
@@ -208,16 +208,16 @@ func (h *Holmes) memCheckAndDump(mem int) {
 		return
 	}
 
-	if triggered := h.memProfile(mem); triggered {
+	if triggered := h.memProfile(mem, curCpu); triggered {
 		h.memCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.memTriggerCount++
 	}
 }
 
-func (h *Holmes) memProfile(rss int) bool {
+func (h *Holmes) memProfile(rss, curCpu int) bool {
 	c := h.opts.MemOpts
-	if ReachDangerousLimit(rss, c.MemDangerousPercent) {
-		h.logf("[Holmes] current mem percent [%v] greater than dangerous limit [%v], don't create profile", rss, c.MemDangerousPercent)
+	if reachCPUMax(curCpu, h.opts.CPUMaxPercent) {
+		h.logf("[Holmes] current cpu percent [%v] greater than the cpu max [%v], don't create profile", curCpu, h.opts.CPUMaxPercent)
 		return false
 	}
 	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff) {
@@ -293,8 +293,8 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	c := h.opts.CPUOpts
-	if ReachDangerousLimit(curCPUUsage, c.CPUDangerousPercent) {
-		h.logf("[Holmes] current cpu percent [%v] greater than dangerous limit [%v], don't create profile", curCPUUsage, c.CPUDangerousPercent)
+	if reachCPUMax(curCPUUsage, h.opts.CPUMaxPercent) {
+		h.logf("[Holmes] current cpu percent [%v] greater than the cpu max [%v], don't create profile", curCPUUsage, h.opts.CPUMaxPercent)
 		return false
 	}
 	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff) {
