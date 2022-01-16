@@ -34,10 +34,6 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
-	// if current goroutine number is greater than GoroutineNumberMax
-	// holmes would not dump goroutine profile.
-	GoroutineNumberMax int
-
 	GrOpts     *grOptions
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
@@ -85,14 +81,6 @@ func WithCollectInterval(interval string) Option {
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.CoolDown, err = time.ParseDuration(coolDown)
-		return
-	})
-}
-
-// WithGoroutineNumberMax : set GoroutineNumberMax as max
-func WithGoroutineNumberMax(max int) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.GoroutineNumberMax = max
 		return
 	})
 }
@@ -161,6 +149,9 @@ type grOptions struct {
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
 	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
 
+	// if current goroutine number is greater than GoroutineNumberMax
+	// holmes would not dump goroutine profile.
+	GoroutineNumberMax int
 }
 
 func newGrOptions() *grOptions {
@@ -173,11 +164,12 @@ func newGrOptions() *grOptions {
 }
 
 // WithGoroutineDump set the goroutine dump options.
-func WithGoroutineDump(min int, diff int, abs int) Option {
+func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.GrOpts.GoroutineTriggerNumMin = min
 		opts.GrOpts.GoroutineTriggerPercentDiff = diff
 		opts.GrOpts.GoroutineTriggerNumAbs = abs
+		opts.GrOpts.GoroutineNumberMax = max
 		return
 	})
 }
