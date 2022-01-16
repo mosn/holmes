@@ -7,6 +7,8 @@ import (
 	"runtime/pprof"
 	"sync/atomic"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 // Holmes is a self-aware profile dumper.
@@ -103,6 +105,7 @@ func (h *Holmes) DisableMemDump() *Holmes {
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
 	h.initEnvironment()
+	go h.startMemCronJob()
 	go h.startDumpLoop()
 }
 
@@ -225,11 +228,18 @@ func (h *Holmes) memProfile(rss int) bool {
 
 		return false
 	}
-
+	if !c.Dumping.TryLock() {
+		h.logf("cron mem profile is being dumped, so stop warning dump")
+		return false
+	}
+	defer c.Dumping.Unlock()
+	h.writeMemProfile(rss)
+	return true
+}
+func (h *Holmes) writeMemProfile(rss int) {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, mem, rss)
-	return true
 }
 
 // thread start.
@@ -394,4 +404,30 @@ func (h *Holmes) EnableDump(curCPU int) (err error) {
 		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.opts.CPUMaxPercent)
 	}
 	return nil
+}
+
+func (h *Holmes) startMemCronJob() {
+	if !h.opts.MemOpts.EnableCron {
+		return
+	}
+
+	c := cron.New()
+	memCronDump := func() {
+		if !h.opts.MemOpts.Dumping.TryLock() {
+			h.logf("mem profile is being dumped, so stop cron dump")
+			return
+		}
+		defer h.opts.MemOpts.Dumping.Unlock()
+
+		_, rss, _, _, err := collect()
+		if err != nil {
+			h.logf(err.Error())
+			return
+		}
+		h.logf("mem cron dump profile")
+		h.writeMemProfile(rss)
+	}
+	// todo add cron spec syntax check
+	c.AddFunc(h.opts.MemOpts.CronExp, memCronDump)
+	c.Start()
 }

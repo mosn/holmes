@@ -7,6 +7,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect

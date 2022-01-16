@@ -10,7 +10,10 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	mem_util "github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
@@ -181,4 +184,15 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 	)
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
+}
+
+// TryLock is a try lock implementation
+const mutexLocked = 1 << iota
+
+type TryLock struct {
+	sync.Mutex
+}
+
+func (m *TryLock) TryLock() bool {
+	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.Mutex)), 0, mutexLocked)
 }

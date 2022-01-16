@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -174,7 +175,11 @@ type memOptions struct {
 	// enable the heap dumper, should dump if one of the following requirements is matched
 	//   1. memory usage > MemTriggerPercentMin && memory usage diff > MemTriggerPercentDiff
 	//   2. memory usage > MemTriggerPercentAbs
-	Enable                bool
+	Enable     bool
+	EnableCron bool
+	CronExp    string
+	Dumping    *TryLock
+
 	MemTriggerPercentMin  int // mem trigger minimum in percent
 	MemTriggerPercentDiff int // mem trigger diff in percent
 	MemTriggerPercentAbs  int // mem trigger absolute in percent
@@ -186,6 +191,7 @@ func newMemOptions() *memOptions {
 		MemTriggerPercentAbs:  defaultMemTriggerAbs,
 		MemTriggerPercentDiff: defaultMemTriggerDiff,
 		MemTriggerPercentMin:  defaultMemTriggerMin,
+		Dumping:               &TryLock{sync.Mutex{}},
 	}
 }
 
@@ -265,6 +271,13 @@ func WithCGroup(useCGroup bool) Option {
 func WithLoggerLevel(level int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.LogLevel = level
+		return
+	})
+}
+func WithMemCron(cronExp string) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.MemOpts.EnableCron = true
+		opts.MemOpts.CronExp = cronExp
 		return
 	})
 }
