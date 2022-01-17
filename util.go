@@ -159,9 +159,13 @@ func collect() (int, int, int, int, error) {
 	return int(cpu), int(mem), gNum, tNum, nil
 }
 
-func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff int) bool {
+func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bool {
 	// should bigger than rule min
 	if curVal < ruleMin {
+		return false
+	}
+	if ruleMax != 0 && curVal >= ruleMax {
+		// todo better sample the max number of Goroutine instead of skipping it simply.
 		return false
 	}
 

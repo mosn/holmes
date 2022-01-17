@@ -170,11 +170,6 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 
-	if h.opts.GrOpts.GoroutineTriggerNumMax != 0 && gNum >= h.opts.GrOpts.GoroutineTriggerNumMax {
-		// todo better sample the max number of Goroutine instead of skipping it simply.
-		h.logf("[Holmes] too many goroutine number [%v](greater than [%v]), skipping dump", gNum, h.opts.GrOpts.GoroutineTriggerNumMax)
-		return
-	}
 	if h.grCoolDownTime.After(time.Now()) {
 		h.logf("[Holmes] goroutine dump is in cooldown")
 		return
@@ -188,10 +183,10 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 
 func (h *Holmes) goroutineProfile(gNum int) bool {
 	c := h.opts.GrOpts
-	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff) {
+	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumMax) {
 		h.debugUniform("NODUMP", type2name[goroutine],
 			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
-			h.grNumStats.data, gNum)
+			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
 
 		return false
 	}
@@ -222,10 +217,10 @@ func (h *Holmes) memCheckAndDump(mem int) {
 
 func (h *Holmes) memProfile(rss int) bool {
 	c := h.opts.MemOpts
-	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff) {
+	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugUniform("NODUMP", type2name[mem],
-			c.MemTriggerPercentMin, c.MemTriggerPercentDiff, c.MemTriggerPercentAbs,
+			c.MemTriggerPercentMin, c.MemTriggerPercentDiff, c.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
 		return false
@@ -256,10 +251,10 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 
 func (h *Holmes) threadProfile(curThreadNum int) bool {
 	c := h.opts.ThreadOpts
-	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff) {
+	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugUniform("NODUMP", type2name[thread],
-			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs,
+			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
 		return false
@@ -295,10 +290,10 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	c := h.opts.CPUOpts
-	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff) {
+	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugUniform("NODUMP", type2name[cpu],
-			c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs,
+			c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
@@ -371,9 +366,9 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	}
 }
 
-func (h *Holmes) debugUniform(msg string, name string, min, diff, abs int, data []int, cur int) {
-	h.debugf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
-		msg, name, min, diff, abs, data, cur)
+func (h *Holmes) debugUniform(msg string, name string, min, diff, abs, max int, data []int, cur int) {
+	h.debugf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, config_max : %v, previous : %v, current: %v",
+		msg, name, min, diff, abs, max, data, cur)
 }
 
 func (h *Holmes) infoUniform(msg string, name string, min, diff, abs int, data []int, cur int) {

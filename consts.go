@@ -67,3 +67,9 @@ const (
 	LogLevelInfo = iota
 	LogLevelDebug
 )
+
+const (
+	// NotSupportTypeMaxConfig means this profile type is
+	// not support control dump profile by max parameter
+	NotSupportTypeMaxConfig = 0
+)

@@ -143,7 +143,7 @@ func withDumpProfileType(profileType dumpProfileType) Option {
 type grOptions struct {
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
 	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > GoroutineTriggerPercentDiff
-	//   2. goroutine_num > GoroutineTriggerNumAbsNum
+	//   2. goroutine_num > GoroutineTriggerNumAbsNum && && goroutine_num < GoroutineTriggerNumMax
 	Enable                      bool
 	GoroutineTriggerNumMin      int // goroutine trigger min in number
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
