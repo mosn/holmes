@@ -169,8 +169,10 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	if !h.opts.GrOpts.Enable {
 		return
 	}
-	if h.opts.GrOpts.GoroutineNumberMax != 0 && gNum >= h.opts.GrOpts.GoroutineNumberMax {
-		h.logf("[Holmes] current goroutine number [%v] is greater than [%v], don't dump", gNum, h.opts.GrOpts.GoroutineNumberMax)
+
+	if h.opts.GrOpts.GoroutineTriggerNumMax != 0 && gNum >= h.opts.GrOpts.GoroutineTriggerNumMax {
+		// todo better sample the max number of Goroutine instead of skipping it simply.
+		h.logf("[Holmes] too many goroutine number [%v](greater than [%v]), skipping dump", gNum, h.opts.GrOpts.GoroutineTriggerNumMax)
 		return
 	}
 	if h.grCoolDownTime.After(time.Now()) {

@@ -20,7 +20,7 @@ h, _ := holmes.New(
     holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
-    holmes.WithGoroutineDump(10, 25, 2000,10*1000),
+    holmes.WithGoroutineDump(10, 25, 2000, 10*1000),
 )
 h.EnableGoroutineDump()
 
@@ -116,7 +116,7 @@ h, _ := holmes.New(
 
     holmes.WithCPUDump(10, 25, 80),
     holmes.WithMemDump(30, 25, 80),
-    holmes.WithGoroutineDump(500, 25, 20000,0),
+    holmes.WithGoroutineDump(500, 25, 20000, 0),
 )
 
 h.EnableMemDump().

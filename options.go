@@ -149,9 +149,9 @@ type grOptions struct {
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
 	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
 
-	// if current goroutine number is greater than GoroutineNumberMax
+	// if current goroutine number is greater than GoroutineTriggerNumMax
 	// holmes would not dump goroutine profile.
-	GoroutineNumberMax int
+	GoroutineTriggerNumMax int
 }
 
 func newGrOptions() *grOptions {
@@ -169,7 +169,7 @@ func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 		opts.GrOpts.GoroutineTriggerNumMin = min
 		opts.GrOpts.GoroutineTriggerPercentDiff = diff
 		opts.GrOpts.GoroutineTriggerNumAbs = abs
-		opts.GrOpts.GoroutineNumberMax = max
+		opts.GrOpts.GoroutineTriggerNumMax = max
 		return
 	})
 }
