@@ -7,7 +7,7 @@ import (
 )
 
 func TestTryLock_TryLock(t *testing.T) {
-	tl := &TryLock{}
+	tl := NewTryLock()
 	tl.Lock()
 	assert.Equal(t, tl.TryLock(), false)
 	tl.Unlock()

@@ -79,7 +79,8 @@ h, _ := holmes.New(
     holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
-    holmes.WithMemDump(30, 25, 80),
+    holmes.WithMemDump(30, 25, 80), 
+    holmes.WithMemCron("0/1 * * * ?"), 
 )
 
 h.EnableMemDump()
@@ -99,6 +100,8 @@ h.Stop()
 * WithTextDump() means not in binary mode, so it's text mode profiles
 * WithMemDump(30, 25, 80) means dump will happen when memory usage > 10% && 
   memory usage > 125% * previous memory usage or memory usage > 80%.
+* WithMemCron("0/1 * * * ?") means dump memory profile every minute. Holmes will skip the dumping 
+  if it encounters cron job dumping, and vice versa.
   
 ### enable them all!
 

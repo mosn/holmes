@@ -1,11 +1,13 @@
 package holmes
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 type options struct {
@@ -177,7 +179,7 @@ type memOptions struct {
 	//   2. memory usage > MemTriggerPercentAbs
 	Enable     bool
 	EnableCron bool
-	CronExp    string
+	CronSpec   string
 	Dumping    *TryLock
 
 	MemTriggerPercentMin  int // mem trigger minimum in percent
@@ -191,7 +193,7 @@ func newMemOptions() *memOptions {
 		MemTriggerPercentAbs:  defaultMemTriggerAbs,
 		MemTriggerPercentDiff: defaultMemTriggerDiff,
 		MemTriggerPercentMin:  defaultMemTriggerMin,
-		Dumping:               &TryLock{sync.Mutex{}},
+		Dumping:               NewTryLock(),
 	}
 }
 
@@ -274,10 +276,14 @@ func WithLoggerLevel(level int) Option {
 		return
 	})
 }
-func WithMemCron(cronExp string) Option {
+func WithMemCron(cronSpec string) Option {
 	return optionFunc(func(opts *options) (err error) {
+		if _, err := cron.ParseStandard(cronSpec); err != nil {
+			// only support standard that contained 5 entries https://en.wikipedia.org/wiki/Cron
+			return fmt.Errorf("can't parse cron spec [%v], error is %v", cronSpec, err)
+		}
 		opts.MemOpts.EnableCron = true
-		opts.MemOpts.CronExp = cronExp
+		opts.MemOpts.CronSpec = cronSpec
 		return
 	})
 }

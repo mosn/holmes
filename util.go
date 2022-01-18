@@ -10,10 +10,7 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
-	"unsafe"
 
 	mem_util "github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
@@ -187,12 +184,30 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 }
 
 // TryLock is a try lock implementation
-const mutexLocked = 1 << iota
-
 type TryLock struct {
-	sync.Mutex
+	ch chan struct{}
 }
 
+func NewTryLock() *TryLock {
+	m := &TryLock{ch: make(chan struct{}, 1)}
+	m.ch <- struct{}{}
+	return m
+}
+func (m *TryLock) Lock() {
+	<-m.ch
+}
+func (m *TryLock) Unlock() {
+	select {
+	case m.ch <- struct{}{}:
+	default:
+		panic("unlock of unlocked mutex")
+	}
+}
 func (m *TryLock) TryLock() bool {
-	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.Mutex)), 0, mutexLocked)
+	select {
+	case <-m.ch:
+		return true
+	default:
+	}
+	return false
 }

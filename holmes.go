@@ -105,7 +105,7 @@ func (h *Holmes) DisableMemDump() *Holmes {
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
 	h.initEnvironment()
-	go h.startMemCronJob()
+	go h.startCronJob()
 	go h.startDumpLoop()
 }
 
@@ -406,7 +406,8 @@ func (h *Holmes) EnableDump(curCPU int) (err error) {
 	return nil
 }
 
-func (h *Holmes) startMemCronJob() {
+// startCronJob temporarily only support memory profile type
+func (h *Holmes) startCronJob() {
 	if !h.opts.MemOpts.EnableCron {
 		return
 	}
@@ -428,6 +429,8 @@ func (h *Holmes) startMemCronJob() {
 		h.writeMemProfile(rss)
 	}
 	// todo add cron spec syntax check
-	c.AddFunc(h.opts.MemOpts.CronExp, memCronDump)
+	if _, err := c.AddFunc(h.opts.MemOpts.CronSpec, memCronDump); err != nil {
+		h.logf("[Holmes] mem cron job [%v] fail to add function: %v", h.opts.MemOpts.CronSpec, err)
+	}
 	c.Start()
 }
