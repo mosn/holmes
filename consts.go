@@ -70,9 +70,9 @@ const (
 
 const (
 	// NotSupportTypeMaxConfig means this profile type is
-	// not support control dump profile by max parameter
+	// not support control dump profile by max parameter.
 	NotSupportTypeMaxConfig = 0
 
-	// UniformLogFormat is the format of uniform logging
+	// UniformLogFormat is the format of uniform logging.
 	UniformLogFormat = "[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, config_max : %v, previous : %v, current: %v"
 )

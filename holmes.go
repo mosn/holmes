@@ -187,7 +187,6 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
 			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
 			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
-
 		return false
 	}
 
@@ -365,16 +364,6 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		}
 	}
 }
-
-//func (h *Holmes) debugUniform(msg string, name string, min, diff, abs, max int, data []int, cur int) {
-//	h.debugf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, config_max : %v, previous : %v, current: %v",
-//		msg, name, min, diff, abs, max, data, cur)
-//}
-//
-//func (h *Holmes) infoUniform(msg string, name string, min, diff, abs int, data []int, cur int) {
-//	h.logf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
-//		msg, name, min, diff, abs, data, cur)
-//}
 
 func (h *Holmes) initEnvironment() {
 	// choose whether the max memory is limited by cgroup
