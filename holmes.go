@@ -184,7 +184,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 func (h *Holmes) goroutineProfile(gNum int) bool {
 	c := h.opts.GrOpts
 	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumMax) {
-		h.debugUniform("NODUMP", type2name[goroutine],
+		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
 			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
 			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
 
@@ -219,7 +219,7 @@ func (h *Holmes) memProfile(rss int) bool {
 	c := h.opts.MemOpts
 	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
-		h.debugUniform("NODUMP", type2name[mem],
+		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
 			c.MemTriggerPercentMin, c.MemTriggerPercentDiff, c.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
@@ -253,7 +253,7 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 	c := h.opts.ThreadOpts
 	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
-		h.debugUniform("NODUMP", type2name[thread],
+		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
 			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
@@ -292,7 +292,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	c := h.opts.CPUOpts
 	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
-		h.debugUniform("NODUMP", type2name[cpu],
+		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
 			c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
@@ -317,8 +317,8 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	time.Sleep(defaultCPUSamplingTime)
 	pprof.StopCPUProfile()
 
-	h.infoUniform("pprof dump to log dir", type2name[cpu],
-		c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs,
+	h.logf(UniformLogFormat, "pprof dump to log dir", type2name[cpu],
+		c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
 	return true
@@ -330,18 +330,18 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	switch dumpType {
 	case mem:
 		opts := h.opts.MemOpts
-		h.infoUniform("pprof", type2name[dumpType],
-			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs,
+		h.logf("pprof", type2name[dumpType],
+			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, currentStat)
 	case goroutine:
 		opts := h.opts.GrOpts
-		h.infoUniform("pprof", type2name[dumpType],
-			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs,
+		h.logf("pprof", type2name[dumpType],
+			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs, NotSupportTypeMaxConfig,
 			h.grNumStats.data, currentStat)
 	case thread:
 		opts := h.opts.ThreadOpts
-		h.infoUniform("pprof", type2name[dumpType],
-			opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs,
+		h.logf("pprof", type2name[dumpType],
+			opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, currentStat)
 	}
 
@@ -366,15 +366,15 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	}
 }
 
-func (h *Holmes) debugUniform(msg string, name string, min, diff, abs, max int, data []int, cur int) {
-	h.debugf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, config_max : %v, previous : %v, current: %v",
-		msg, name, min, diff, abs, max, data, cur)
-}
-
-func (h *Holmes) infoUniform(msg string, name string, min, diff, abs int, data []int, cur int) {
-	h.logf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
-		msg, name, min, diff, abs, data, cur)
-}
+//func (h *Holmes) debugUniform(msg string, name string, min, diff, abs, max int, data []int, cur int) {
+//	h.debugf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, config_max : %v, previous : %v, current: %v",
+//		msg, name, min, diff, abs, max, data, cur)
+//}
+//
+//func (h *Holmes) infoUniform(msg string, name string, min, diff, abs int, data []int, cur int) {
+//	h.logf("[Holmes] %v %v, config_min : %v, config_diff : %v, config_abs : %v, previous : %v, current: %v",
+//		msg, name, min, diff, abs, data, cur)
+//}
 
 func (h *Holmes) initEnvironment() {
 	// choose whether the max memory is limited by cgroup

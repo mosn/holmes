@@ -165,7 +165,6 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 		return false
 	}
 	if ruleMax != NotSupportTypeMaxConfig && curVal >= ruleMax {
-		// todo better sample the max number of Goroutine instead of skipping it simply.
 		return false
 	}
 
