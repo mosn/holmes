@@ -28,7 +28,7 @@ func main() {
 	// simulate cron and self-warning run at the same time
 	go func() {
 		c := cron.New()
-		c.AddFunc(everyMinute, func() {
+		_, _ = c.AddFunc(everyMinute, func() {
 			var a = make([]byte, 1073741824)
 			_ = a
 		})

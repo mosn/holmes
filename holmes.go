@@ -236,6 +236,7 @@ func (h *Holmes) memProfile(rss int) bool {
 	h.writeMemProfile(rss)
 	return true
 }
+
 func (h *Holmes) writeMemProfile(rss int) {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
@@ -428,7 +429,6 @@ func (h *Holmes) startCronJob() {
 		h.logf("mem cron dump profile")
 		h.writeMemProfile(rss)
 	}
-	// todo add cron spec syntax check
 	if _, err := c.AddFunc(h.opts.MemOpts.CronSpec, memCronDump); err != nil {
 		h.logf("[Holmes] mem cron job [%v] fail to add function: %v", h.opts.MemOpts.CronSpec, err)
 	}
