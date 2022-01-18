@@ -164,6 +164,8 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 	if curVal < ruleMin {
 		return false
 	}
+
+	// if ruleMax is enable and current value bigger max, skip dumping
 	if ruleMax != NotSupportTypeMaxConfig && curVal >= ruleMax {
 		return false
 	}
