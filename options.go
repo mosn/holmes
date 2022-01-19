@@ -142,13 +142,13 @@ func withDumpProfileType(profileType dumpProfileType) Option {
 
 type grOptions struct {
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
-	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine diff percent > GoroutineTriggerPercentDiff
-	//   2. goroutine_num > GoroutineTriggerNumAbsNum
+	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > GoroutineTriggerPercentDiff
+	//   2. goroutine_num > GoroutineTriggerNumAbsNum && goroutine_num < GoroutineTriggerNumMax
 	Enable                      bool
 	GoroutineTriggerNumMin      int // goroutine trigger min in number
 	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
 	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
-
+	GoroutineTriggerNumMax      int // goroutine trigger max in number
 }
 
 func newGrOptions() *grOptions {
@@ -161,11 +161,12 @@ func newGrOptions() *grOptions {
 }
 
 // WithGoroutineDump set the goroutine dump options.
-func WithGoroutineDump(min int, diff int, abs int) Option {
+func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.GrOpts.GoroutineTriggerNumMin = min
 		opts.GrOpts.GoroutineTriggerPercentDiff = diff
 		opts.GrOpts.GoroutineTriggerNumAbs = abs
+		opts.GrOpts.GoroutineTriggerNumMax = max
 		return
 	})
 }

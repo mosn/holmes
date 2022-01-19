@@ -158,9 +158,14 @@ func collect() (int, int, int, int, error) {
 	return int(cpu), int(mem), gNum, tNum, nil
 }
 
-func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff int) bool {
+func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bool {
 	// should bigger than rule min
 	if curVal < ruleMin {
+		return false
+	}
+
+	// if ruleMax is enable and current value bigger max, skip dumping
+	if ruleMax != NotSupportTypeMaxConfig && curVal >= ruleMax {
 		return false
 	}
 
