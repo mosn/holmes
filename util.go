@@ -208,7 +208,7 @@ func (m *TryLock) Unlock() {
 	}
 }
 
-// Unlock
+// TryLock returns true if it got the lock
 func (m *TryLock) TryLock() bool {
 	select {
 	case <-m.ch:

@@ -105,6 +105,7 @@ func (h *Holmes) DisableMemDump() *Holmes {
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
 	h.initEnvironment()
+
 	go h.startCronJob()
 	go h.startDumpLoop()
 }
@@ -130,6 +131,7 @@ func (h *Holmes) startDumpLoop() {
 	// dump loop
 	ticker := time.NewTicker(h.opts.CollectInterval)
 	defer ticker.Stop()
+
 	for range ticker.C {
 		if atomic.LoadInt64(&h.stopped) == 1 {
 			fmt.Println("[Holmes] dump loop stopped")
@@ -228,12 +230,15 @@ func (h *Holmes) memProfile(rss int) bool {
 
 		return false
 	}
+
 	if !c.Dumping.TryLock() {
 		h.logf("cron mem profile is being dumped, so stop warning dump")
 		return false
 	}
+
 	defer c.Dumping.Unlock()
 	h.writeMemProfile(rss)
+
 	return true
 }
 
@@ -362,6 +367,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		if !h.opts.DumpFullStack {
 			res = trimResult(data)
 		}
+
 		h.logf(res)
 	} else {
 		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
@@ -407,7 +413,7 @@ func (h *Holmes) EnableDump(curCPU int) (err error) {
 	return nil
 }
 
-// startCronJob temporarily only support memory profile type
+// startCronJob temporarily only support memory profile type.
 func (h *Holmes) startCronJob() {
 	if !h.opts.MemOpts.EnableCron {
 		return
@@ -426,11 +432,14 @@ func (h *Holmes) startCronJob() {
 			h.logf(err.Error())
 			return
 		}
+
 		h.logf("mem cron dump profile")
 		h.writeMemProfile(rss)
 	}
+
 	if _, err := c.AddFunc(h.opts.MemOpts.CronSpec, memCronDump); err != nil {
 		h.logf("[Holmes] mem cron job [%v] fail to add function: %v", h.opts.MemOpts.CronSpec, err)
 	}
+
 	c.Start()
 }

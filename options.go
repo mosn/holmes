@@ -277,12 +277,12 @@ func WithLoggerLevel(level int) Option {
 	})
 }
 
-// WithMemCron set a cron job for memory dumping
+// WithMemCron set a cron job for memory dumping.
 func WithMemCron(cronSpec string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		if _, err := cron.ParseStandard(cronSpec); err != nil {
 			// only support standard that contained 5 entries https://en.wikipedia.org/wiki/Cron
-			return fmt.Errorf("can't parse cron spec [%v], error is %v", cronSpec, err)
+			return fmt.Errorf("can't parse cron spec [%v], error is %w", cronSpec, err)
 		}
 		opts.MemOpts.EnableCron = true
 		opts.MemOpts.CronSpec = cronSpec
