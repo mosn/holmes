@@ -81,7 +81,6 @@ func getUsageCGroup() (float64, float64, int, int, error) {
 	// need to divide by core number
 	cpuPercent = cpuPercent / cpuCore
 	mem, err := p.MemoryInfo()
-	p.MemoryPercent()
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
