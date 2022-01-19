@@ -335,7 +335,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	case goroutine:
 		opts := h.opts.GrOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs, NotSupportTypeMaxConfig,
+			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs, h.opts.GrOpts.GoroutineTriggerNumMax,
 			h.grNumStats.data, currentStat)
 	case thread:
 		opts := h.opts.ThreadOpts
