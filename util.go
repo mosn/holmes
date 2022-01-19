@@ -187,19 +187,19 @@ type TryLock struct {
 	ch chan struct{}
 }
 
-// NewTryLock return a TryLock
+// NewTryLock return a TryLock.
 func NewTryLock() *TryLock {
 	m := &TryLock{ch: make(chan struct{}, 1)}
 	m.ch <- struct{}{}
 	return m
 }
 
-// Lock locks the try-lock
+// Lock locks the try-lock.
 func (m *TryLock) Lock() {
 	<-m.ch
 }
 
-// Unlock unlocks the try-lock
+// Unlock unlocks the try-lock.
 func (m *TryLock) Unlock() {
 	select {
 	case m.ch <- struct{}{}:
@@ -208,7 +208,7 @@ func (m *TryLock) Unlock() {
 	}
 }
 
-// TryLock returns true if it got the lock
+// TryLock returns true if it got the lock.
 func (m *TryLock) TryLock() bool {
 	select {
 	case <-m.ch:
