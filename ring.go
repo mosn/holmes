@@ -20,12 +20,6 @@ func (r *ring) push(i int) {
 		return
 	}
 
-	// no position to write
-	// jump to head
-	if r.idx >= r.maxLen {
-		r.idx = 0
-	}
-
 	// the first round
 	if len(r.data) < r.maxLen {
 		r.sum += i
@@ -37,7 +31,7 @@ func (r *ring) push(i int) {
 
 	// the ring is expanded, just write to the position
 	r.data[r.idx] = i
-	r.idx++
+	r.idx = (r.idx + 1) % r.maxLen
 }
 
 func (r *ring) avg() int {
