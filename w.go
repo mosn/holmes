@@ -1,5 +1,5 @@
 package holmes
 
-func w() {
-println("hwllo")
+func w() string {
+return "abc"
 }
