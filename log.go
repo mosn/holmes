@@ -59,7 +59,7 @@ func (h *Holmes) writeString(content string) {
 			return
 		}
 
-		newLogger, err = os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm)
+		newLogger, err = os.OpenFile(filepath.Clean(srcPath), defaultLoggerFlags, defaultLoggerPerm)
 
 		if err != nil {
 			h.opts.logOpts.Enable = false
