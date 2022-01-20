@@ -43,9 +43,10 @@ func (h *Holmes) writeString(content string) {
 		var (
 			newLogger *os.File
 			err       error
+			dumpPath  = h.opts.DumpPath
 			suffix    = time.Now().Format("20060102150405")
-			srcPath   = filepath.Join(filepath.Clean(h.opts.DumpPath), defaultLoggerName)
-			dstPath   = filepath.Join(filepath.Clean(h.opts.DumpPath), defaultLoggerName+"_"+suffix+".back")
+			srcPath   = filepath.Clean(filepath.Join(dumpPath, defaultLoggerName))
+			dstPath   = filepath.Clean(filepath.Join(dumpPath, defaultLoggerName+"_"+suffix+".back"))
 		)
 
 		err = os.Rename(srcPath, dstPath)
