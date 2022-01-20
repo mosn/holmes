@@ -27,9 +27,11 @@ func (h *Holmes) writeString(content string) {
 	if _, err := h.opts.Logger.WriteString(content); err != nil {
 		fmt.Println(err) // where to write this log?
 	}
+
 	if !h.opts.logOpts.Enable {
 		return
 	}
+
 	state, err := h.opts.Logger.Stat()
 	if err != nil {
 		h.opts.logOpts.Enable = false
@@ -46,7 +48,7 @@ func (h *Holmes) writeString(content string) {
 			dumpPath  = h.opts.DumpPath
 			suffix    = time.Now().Format("20060102150405")
 			srcPath   = filepath.Clean(filepath.Join(dumpPath, defaultLoggerName))
-			dstPath   = filepath.Clean(filepath.Join(dumpPath, defaultLoggerName+"_"+suffix+".back"))
+			dstPath   = srcPath + "_" + suffix + ".back"
 		)
 
 		err = os.Rename(srcPath, dstPath)
@@ -56,6 +58,7 @@ func (h *Holmes) writeString(content string) {
 
 			return
 		}
+
 		newLogger, err = os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm)
 
 		if err != nil {
@@ -67,5 +70,4 @@ func (h *Holmes) writeString(content string) {
 		h.opts.Logger, newLogger = newLogger, h.opts.Logger
 		_ = newLogger.Close()
 	}
-
 }
