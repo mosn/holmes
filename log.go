@@ -28,27 +28,36 @@ func (h *Holmes) writeString(content string) {
 		state, err := h.opts.Logger.Stat()
 		if err != nil {
 			h.opts.logOpts.Enable = false
+
 			return
 		}
+
 		if state.Size() > h.opts.logOpts.SplitLoggerSize && atomic.CompareAndSwapInt32(&h.changelog, 0, 1) {
 			defer atomic.StoreInt32(&h.changelog, 0)
+
 			var (
 				newLogger *os.File
 				err       error
 				suffix    = time.Now().Format("20060102150405")
-				srcPath   = filepath.Join(h.opts.DumpPath, defaultLoggerName)
-				dstPath   = filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back")
+				srcPath   = filepath.Clean(filepath.Join(h.opts.DumpPath, defaultLoggerName))
+				dstPath   = filepath.Clean(filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back"))
 			)
+
 			err = os.Rename(srcPath, dstPath)
+
 			if err != nil {
 				h.opts.logOpts.Enable = false
+
 				return
 			}
 			newLogger, err = os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm)
+
 			if err != nil {
 				h.opts.logOpts.Enable = false
+
 				return
 			}
+
 			h.opts.Logger, newLogger = newLogger, h.opts.Logger
 			_ = newLogger.Close()
 		}
