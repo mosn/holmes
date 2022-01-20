@@ -35,11 +35,12 @@ func (h *Holmes) writeString(content string) {
 			var (
 				newLogger *os.File
 				err       error
-				suffix    string = time.Now().Format("20060102150405")
+				suffix    = time.Now().Format("20060102150405")
+				srcPath   = filepath.Join(h.opts.DumpPath, defaultLoggerName)
+				dstPath   = filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back")
 			)
-			srcPath := filepath.Join(h.opts.DumpPath, defaultLoggerName)
-			dstPath := filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back")
-			if err := os.Rename(srcPath, dstPath); err != nil {
+			err = os.Rename(srcPath, dstPath)
+			if err != nil {
 				h.opts.logOpts.Enable = false
 				return
 			}
@@ -50,7 +51,6 @@ func (h *Holmes) writeString(content string) {
 			}
 			h.opts.Logger, newLogger = newLogger, h.opts.Logger
 			_ = newLogger.Close()
-
 		}
 	}
 	if _, err := h.opts.Logger.WriteString(content); err != nil {
