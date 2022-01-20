@@ -14,6 +14,7 @@ type Holmes struct {
 	opts *options
 
 	// stats
+	changelog          int32
 	collectCount       int
 	threadTriggerCount int
 	cpuTriggerCount    int

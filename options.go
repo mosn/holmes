@@ -34,6 +34,7 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
+	logOpts    *loggerOptions
 	GrOpts     *grOptions
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
@@ -53,6 +54,7 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	return &options{
+		logOpts:         newLoggerOptions(),
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
@@ -266,5 +268,29 @@ func WithLoggerLevel(level int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.LogLevel = level
 		return
+	})
+}
+
+type loggerOptions struct {
+	Enable          bool
+	SplitLoggerSize int64 // SplitLoggerSize The size of the log split
+}
+
+func newLoggerOptions() *loggerOptions {
+	return &loggerOptions{
+		Enable:          true,
+		SplitLoggerSize: defaultShardLoggerSize,
+	}
+}
+
+func WithLoggerShard(enable bool, shardLoggerSize int64) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.logOpts.Enable = enable
+		if enable && shardLoggerSize <= 0 {
+			opts.logOpts.SplitLoggerSize = defaultShardLoggerSize
+			return nil
+		}
+		opts.logOpts.SplitLoggerSize = shardLoggerSize
+		return nil
 	})
 }
