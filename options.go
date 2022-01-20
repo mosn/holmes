@@ -283,7 +283,8 @@ func newLoggerOptions() *loggerOptions {
 	}
 }
 
-func WithLoggerShard(enable bool, shardLoggerSize int64) Option {
+// WithLoggerSplit set the split log options.
+func WithLoggerSplit(enable bool, shardLoggerSize int64) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.logOpts.Enable = enable
 		if enable && shardLoggerSize <= 0 {

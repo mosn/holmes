@@ -31,17 +31,16 @@ func (h *Holmes) writeString(content string) {
 			suffix := fmt.Sprintf(time.Now().Format("20060102150405"))
 			srcPath := filepath.Join(h.opts.DumpPath, defaultLoggerName)
 			dstPath := filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back")
-			err := h.opts.Logger.Close()
-			if err != nil {
-				fmt.Println("close err:", err)
+			if err := os.Rename(srcPath, dstPath); err != nil {
+				h.opts.logOpts.Enable = false
+				return
 			}
-			err = os.Rename(srcPath, dstPath)
-			if err != nil {
-				fmt.Println("rename err:", err)
-			}
-			err = WithDumpPath(h.opts.DumpPath).apply(h.opts)
-			if err != nil {
-				fmt.Println("new logger err:", err)
+			if newLogger, err := os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm); err != nil {
+				h.opts.logOpts.Enable = false
+				return
+			} else {
+				h.opts.Logger, newLogger = newLogger, h.opts.Logger
+				_ = newLogger.Close()
 			}
 		}
 	}
