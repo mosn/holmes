@@ -25,23 +25,32 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 
 func (h *Holmes) writeString(content string) {
 	if h.opts.logOpts.Enable {
-		state, _ := h.opts.Logger.Stat()
+		state, err := h.opts.Logger.Stat()
+		if err != nil {
+			h.opts.logOpts.Enable = false
+			return
+		}
 		if state.Size() > h.opts.logOpts.SplitLoggerSize && atomic.CompareAndSwapInt32(&h.changelog, 0, 1) {
 			defer atomic.StoreInt32(&h.changelog, 0)
-			suffix := fmt.Sprintf(time.Now().Format("20060102150405"))
+			var (
+				newLogger *os.File
+				err       error
+				suffix    string = time.Now().Format("20060102150405")
+			)
 			srcPath := filepath.Join(h.opts.DumpPath, defaultLoggerName)
 			dstPath := filepath.Join(h.opts.DumpPath, defaultLoggerName+"_"+suffix+".back")
 			if err := os.Rename(srcPath, dstPath); err != nil {
 				h.opts.logOpts.Enable = false
 				return
 			}
-			if newLogger, err := os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm); err != nil {
+			newLogger, err = os.OpenFile(srcPath, defaultLoggerFlags, defaultLoggerPerm)
+			if err != nil {
 				h.opts.logOpts.Enable = false
 				return
-			} else {
-				h.opts.Logger, newLogger = newLogger, h.opts.Logger
-				_ = newLogger.Close()
 			}
+			h.opts.Logger, newLogger = newLogger, h.opts.Logger
+			_ = newLogger.Close()
+
 		}
 	}
 	if _, err := h.opts.Logger.WriteString(content); err != nil {
