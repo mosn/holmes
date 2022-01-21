@@ -5,6 +5,8 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/docker/go-units"
 )
 
 type options struct {
@@ -284,14 +286,16 @@ func newLoggerOptions() *loggerOptions {
 }
 
 // WithLoggerSplit set the split log options.
-func WithLoggerSplit(enable bool, shardLoggerSize int64) Option {
+// eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
+func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.logOpts.Enable = enable
-		if enable && shardLoggerSize <= 0 {
+		parseShardLoggerSize, err := units.FromHumanSize(shardLoggerSize)
+		if enable && parseShardLoggerSize <= 0 {
 			opts.logOpts.SplitLoggerSize = defaultShardLoggerSize
 			return nil
 		}
-		opts.logOpts.SplitLoggerSize = shardLoggerSize
+		opts.logOpts.SplitLoggerSize = parseShardLoggerSize
 		return nil
 	})
 }
