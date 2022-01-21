@@ -291,9 +291,9 @@ func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.logOpts.Enable = enable
 		parseShardLoggerSize, err := units.FromHumanSize(shardLoggerSize)
-		if enable && parseShardLoggerSize <= 0 {
+		if enable && (parseShardLoggerSize <= 0 || err != nil) {
 			opts.logOpts.SplitLoggerSize = defaultShardLoggerSize
-			return nil
+			return err
 		}
 		opts.logOpts.SplitLoggerSize = parseShardLoggerSize
 		return nil
