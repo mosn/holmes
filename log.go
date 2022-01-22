@@ -28,13 +28,13 @@ func (h *Holmes) writeString(content string) {
 		fmt.Println(err) // where to write this log?
 	}
 
-	if !h.opts.logOpts.Enable {
+	if !h.opts.logOpts.RotateEnable {
 		return
 	}
 
 	state, err := h.opts.Logger.Stat()
 	if err != nil {
-		h.opts.logOpts.Enable = false
+		h.opts.logOpts.RotateEnable = false
 
 		return
 	}
@@ -54,7 +54,7 @@ func (h *Holmes) writeString(content string) {
 		err = os.Rename(srcPath, dstPath)
 
 		if err != nil {
-			h.opts.logOpts.Enable = false
+			h.opts.logOpts.RotateEnable = false
 
 			return
 		}
@@ -62,7 +62,7 @@ func (h *Holmes) writeString(content string) {
 		newLogger, err = os.OpenFile(filepath.Clean(srcPath), defaultLoggerFlags, defaultLoggerPerm)
 
 		if err != nil {
-			h.opts.logOpts.Enable = false
+			h.opts.logOpts.RotateEnable = false
 
 			return
 		}

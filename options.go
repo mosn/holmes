@@ -274,13 +274,13 @@ func WithLoggerLevel(level int) Option {
 }
 
 type loggerOptions struct {
-	Enable          bool
+	RotateEnable    bool
 	SplitLoggerSize int64 // SplitLoggerSize The size of the log split
 }
 
 func newLoggerOptions() *loggerOptions {
 	return &loggerOptions{
-		Enable:          true,
+		RotateEnable:    true,
 		SplitLoggerSize: defaultShardLoggerSize,
 	}
 }
@@ -289,7 +289,7 @@ func newLoggerOptions() *loggerOptions {
 // eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
 func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.logOpts.Enable = enable
+		opts.logOpts.RotateEnable = enable
 		if !enable {
 			return nil
 		}
