@@ -5,6 +5,8 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/docker/go-units"
 )
 
 type options struct {
@@ -34,6 +36,7 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
+	logOpts    *loggerOptions
 	GrOpts     *grOptions
 	MemOpts    *memOptions
 	CPUOpts    *cpuOptions
@@ -53,6 +56,7 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	return &options{
+		logOpts:         newLoggerOptions(),
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
@@ -266,6 +270,38 @@ func WithCGroup(useCGroup bool) Option {
 func WithLoggerLevel(level int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.LogLevel = level
+		return
+	})
+}
+
+type loggerOptions struct {
+	RotateEnable    bool
+	SplitLoggerSize int64 // SplitLoggerSize The size of the log split
+}
+
+func newLoggerOptions() *loggerOptions {
+	return &loggerOptions{
+		RotateEnable:    true,
+		SplitLoggerSize: defaultShardLoggerSize,
+	}
+}
+
+// WithLoggerSplit set the split log options.
+// eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
+func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.logOpts.RotateEnable = enable
+		if !enable {
+			return nil
+		}
+
+		parseShardLoggerSize, err := units.FromHumanSize(shardLoggerSize)
+		if err != nil || (err == nil && parseShardLoggerSize <= 0) {
+			opts.logOpts.SplitLoggerSize = defaultShardLoggerSize
+			return
+		}
+
+		opts.logOpts.SplitLoggerSize = parseShardLoggerSize
 		return
 	})
 }

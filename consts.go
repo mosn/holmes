@@ -30,6 +30,7 @@ const (
 	defaultLoggerName      = "holmes.log"
 	defaultLoggerFlags     = os.O_RDWR | os.O_CREATE | os.O_APPEND
 	defaultLoggerPerm      = 0644
+	defaultShardLoggerSize = 5242880 // 5m
 )
 
 type dumpProfileType int
