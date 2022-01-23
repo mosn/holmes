@@ -35,6 +35,7 @@ func (h *Holmes) writeString(content string) {
 	state, err := h.opts.Logger.Stat()
 	if err != nil {
 		h.opts.logOpts.RotateEnable = false
+		fmt.Println("get logger stat:", err, "from now on, it will be disabled split log")
 
 		return
 	}
@@ -55,6 +56,7 @@ func (h *Holmes) writeString(content string) {
 
 		if err != nil {
 			h.opts.logOpts.RotateEnable = false
+			fmt.Println("rename err:", err, "from now on, it will be disabled split log")
 
 			return
 		}
@@ -63,6 +65,7 @@ func (h *Holmes) writeString(content string) {
 
 		if err != nil {
 			h.opts.logOpts.RotateEnable = false
+			fmt.Println("open new file err:", err, "from now on, it will be disabled split log")
 
 			return
 		}
