@@ -46,7 +46,21 @@ func readUint(path string) (uint64, error) {
 
 // only reserve the top 10.
 func trimResult(buffer bytes.Buffer) string {
-	return strings.Join(strings.SplitN(buffer.String(), "\n\n", 10), "\n\n")
+	index := 11
+	arr := strings.SplitN(buffer.String(), "\n\n", 11)
+	for i, result := range arr {
+		if result == "" {
+			index = i
+			break
+
+		}
+	}
+
+	if index == 11 {
+		index = 10
+	}
+
+	return strings.Join(arr[:index], "\n\n")
 }
 
 // return cpu percent, mem in MB, goroutine num, thread num
