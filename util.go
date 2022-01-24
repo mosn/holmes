@@ -46,18 +46,14 @@ func readUint(path string) (uint64, error) {
 
 // only reserve the top 10.
 func trimResult(buffer bytes.Buffer) string {
-	index := 11
-	arr := strings.SplitN(buffer.String(), "\n\n", 11)
+	index := TrimResultTopN
+	arr := strings.SplitN(buffer.String(), "\n\n", TrimResultTopN+1)
+
 	for i, result := range arr {
 		if result == "" {
 			index = i
 			break
-
 		}
-	}
-
-	if index == 11 {
-		index = 10
 	}
 
 	return strings.Join(arr[:index], "\n\n")
