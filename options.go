@@ -213,9 +213,9 @@ type threadOptions struct {
 func newThreadOptions() *threadOptions {
 	return &threadOptions{
 		Enable:                   false,
-		ThreadTriggerPercentAbs:  defaultCPUTriggerAbs,
-		ThreadTriggerPercentDiff: defaultCPUTriggerDiff,
-		ThreadTriggerPercentMin:  defaultCPUTriggerMin,
+		ThreadTriggerPercentAbs:  defaultThreadTriggerAbs,
+		ThreadTriggerPercentDiff: defaultThreadTriggerDiff,
+		ThreadTriggerPercentMin:  defaultThreadTriggerMin,
 	}
 }
 
