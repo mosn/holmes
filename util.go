@@ -44,16 +44,23 @@ func readUint(path string) (uint64, error) {
 	return parseUint(strings.TrimSpace(string(v)), 10, 64)
 }
 
-// only reserve the top 10.
+// only reserve the top n.
 func trimResult(buffer bytes.Buffer) string {
-	arr := strings.Split(buffer.String(), "\n\n")
-	if len(arr) > 10 {
-		arr = arr[:10]
+	index := TrimResultTopN
+	arr := strings.SplitN(buffer.String(), "\n\n", TrimResultTopN+1)
+
+	for i, result := range arr {
+		if result == "" {
+			index = i
+
+			break
+		}
 	}
-	return strings.Join(arr, "\n\n")
+
+	return strings.Join(arr[:index], "\n\n")
 }
 
-// return cpu percent, mem in MB, goroutine num
+// return cpu percent, mem in MB, goroutine num, thread num
 // cgroup ver.
 func getUsageCGroup() (float64, float64, int, int, error) {
 	p, err := process.NewProcess(int32(os.Getpid()))
@@ -148,7 +155,7 @@ func getThreadNum() int {
 
 var getUsage func() (float64, float64, int, int, error)
 
-// cpu mem goroutine err.
+// cpu mem goroutine thread err.
 func collect() (int, int, int, int, error) {
 	cpu, mem, gNum, tNum, err := getUsage()
 	if err != nil {

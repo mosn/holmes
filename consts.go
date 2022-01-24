@@ -70,6 +70,9 @@ const (
 )
 
 const (
+	// TrimResultTopN trimResult return only reserve the top n.
+	TrimResultTopN = 10
+
 	// NotSupportTypeMaxConfig means this profile type is
 	// not support control dump profile by max parameter.
 	NotSupportTypeMaxConfig = 0
