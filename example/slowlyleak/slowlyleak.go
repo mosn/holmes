@@ -18,7 +18,7 @@ func main() {
 		holmes.WithCoolDown("1m"),
 		holmes.WithDumpPath("/tmp"),
 		holmes.WithTextDump(),
-		holmes.WithGoroutineDump(10, 25, 80),
+		holmes.WithGoroutineDump(10, 25, 80, 10000),
 	)
 	h.EnableGoroutineDump().Start()
 	time.Sleep(time.Hour)

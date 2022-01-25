@@ -49,12 +49,8 @@ func trimResult(buffer bytes.Buffer) string {
 	index := TrimResultTopN
 	arr := strings.SplitN(buffer.String(), "\n\n", TrimResultTopN+1)
 
-	for i, result := range arr {
-		if result == "" {
-			index = i
-
-			break
-		}
+	if len(arr) <= TrimResultTopN {
+		index = len(arr) - 1
 	}
 
 	return strings.Join(arr[:index], "\n\n")
