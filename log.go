@@ -80,6 +80,5 @@ func (h *Holmes) writeString(content string) {
 			_ = old.Close()
 
 		}
-
 	}
 }
