@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 // log write content to log file.
@@ -73,7 +74,10 @@ func (h *Holmes) writeString(content string) {
 			return
 		}
 
-		h.opts.Logger, newLogger = newLogger, h.opts.Logger
-		_ = newLogger.Close()
+		old := h.opts.Logger
+		if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&h.opts.Logger)), unsafe.Pointer(h.opts.Logger), unsafe.Pointer(newLogger)) {
+			_ = old.Close()
+		}
+
 	}
 }
