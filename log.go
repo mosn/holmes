@@ -75,8 +75,10 @@ func (h *Holmes) writeString(content string) {
 		}
 
 		old := h.opts.Logger
+		//nolint
 		if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&h.opts.Logger)), unsafe.Pointer(h.opts.Logger), unsafe.Pointer(newLogger)) {
 			_ = old.Close()
+
 		}
 
 	}
