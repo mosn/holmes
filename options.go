@@ -5,8 +5,6 @@ import (
 	"path"
 	"path/filepath"
 	"time"
-
-	"github.com/docker/go-units"
 )
 
 type options struct {
@@ -39,6 +37,7 @@ type options struct {
 	logOpts    *loggerOptions
 	GrOpts     *grOptions
 	MemOpts    *memOptions
+	GCHeapOpts *gcHeapOptions
 	CPUOpts    *cpuOptions
 	ThreadOpts *threadOptions
 }
@@ -59,6 +58,7 @@ func newOptions() *options {
 		logOpts:         newLoggerOptions(),
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
+		GCHeapOpts:      newGCHeapOptions(),
 		CPUOpts:         newCPUOptions(),
 		ThreadOpts:      newThreadOptions(),
 		LogLevel:        LogLevelDebug,
@@ -200,6 +200,35 @@ func WithMemDump(min int, diff int, abs int) Option {
 		opts.MemOpts.MemTriggerPercentMin = min
 		opts.MemOpts.MemTriggerPercentDiff = diff
 		opts.MemOpts.MemTriggerPercentAbs = abs
+		return
+	})
+}
+
+type gcHeapOptions struct {
+	// enable the heap dumper, should dump if one of the following requirements is matched
+	//   1. GC heap usage > GCHeapTriggerPercentMin && GC heap usage diff > GCHeapTriggerPercentDiff
+	//   2. GC heap usage > GCHeapTriggerPercentAbs
+	Enable                   bool
+	GCHeapTriggerPercentMin  int // GC heap trigger minimum in percent
+	GCHeapTriggerPercentDiff int // GC heap trigger diff in percent
+	GCHeapTriggerPercentAbs  int // GC heap trigger absolute in percent
+}
+
+func newGCHeapOptions() *gcHeapOptions {
+	return &gcHeapOptions{
+		Enable:                   false,
+		GCHeapTriggerPercentAbs:  defaultGCHeapTriggerAbs,
+		GCHeapTriggerPercentDiff: defaultGCHeapTriggerDiff,
+		GCHeapTriggerPercentMin:  defaultGCHeapTriggerMin,
+	}
+}
+
+// WithGCHeapDump set the GC heap dump options.
+func WithGCHeapDump(min int, diff int, abs int) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.GCHeapOpts.GCHeapTriggerPercentMin = min
+		opts.GCHeapOpts.GCHeapTriggerPercentDiff = diff
+		opts.GCHeapOpts.GCHeapTriggerPercentAbs = abs
 		return
 	})
 }

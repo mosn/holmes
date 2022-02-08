@@ -23,6 +23,10 @@ const (
 	defaultMemTriggerAbs  = 80 // 80%
 	defaultMemTriggerDiff = 25 // 25%
 
+	defaultGCHeapTriggerMin  = 10 // 10%
+	defaultGCHeapTriggerAbs  = 40 // 40%
+	defaultGCHeapTriggerDiff = 20 // 20%
+
 	defaultInterval        = 5 * time.Second
 	defaultCooldown        = time.Minute
 	defaultDumpProfileType = binaryDump
@@ -47,6 +51,7 @@ const (
 	cpu
 	thread
 	goroutine
+	gcHeap
 )
 
 var type2name = map[configureType]string{
@@ -54,6 +59,7 @@ var type2name = map[configureType]string{
 	cpu:       "cpu",
 	thread:    "thread",
 	goroutine: "goroutine",
+	gcHeap:    "GCHeap",
 }
 
 const (

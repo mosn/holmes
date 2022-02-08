@@ -115,6 +115,21 @@ func getCGroupMemoryLimit() (uint64, error) {
 	return limit, nil
 }
 
+func getNormalMemoryLimit() (uint64, error) {
+	machineMemory, err := mem_util.VirtualMemory()
+	if err != nil {
+		return 0, err
+	}
+	return machineMemory.Total, nil
+}
+
+func getMemoryLimit(useCGroup bool) (uint64, error) {
+	if useCGroup {
+		return getCGroupMemoryLimit()
+	}
+	return getNormalMemoryLimit()
+}
+
 // return cpu percent, mem in MB, goroutine num
 // not use cgroup ver.
 func getUsageNormal() (float64, float64, int, int, error) {

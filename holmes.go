@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"sync/atomic"
 	"time"
@@ -20,18 +21,24 @@ type Holmes struct {
 	cpuTriggerCount    int
 	memTriggerCount    int
 	grTriggerCount     int
+	gcHeapTriggerCount int
 
 	// cooldown
 	threadCoolDownTime time.Time
 	cpuCoolDownTime    time.Time
 	memCoolDownTime    time.Time
+	gcHeapCoolDownTime time.Time
 	grCoolDownTime     time.Time
+
+	// GC heap triggered, need to dump next time.
+	gcHeapTriggered bool
 
 	// stats ring
 	memStats    ring
 	cpuStats    ring
 	grNumStats  ring
 	threadStats ring
+	gcHeapStats ring
 
 	// switch
 	stopped int64
@@ -100,11 +107,34 @@ func (h *Holmes) DisableMemDump() *Holmes {
 	return h
 }
 
+type foo struct {
+	h *Holmes
+	n [4]int64 // useless field, just make sure this struct is bigger than tiny size.
+}
+
+func finalizerCallback(f *foo) {
+	// register the finalizer again
+	runtime.SetFinalizer(f, finalizerCallback)
+
+	f.h.gcHeapCheckAndDump()
+}
+
+func (h *Holmes) startGCCycleLoop() {
+	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
+
+	f := &foo{
+		h: h,
+	}
+	runtime.SetFinalizer(f, finalizerCallback)
+}
+
 // Start starts the dump loop of holmes.
 func (h *Holmes) Start() {
 	atomic.StoreInt64(&h.stopped, 0)
 	h.initEnvironment()
 	go h.startDumpLoop()
+
+	h.startGCCycleLoop()
 }
 
 // Stop the dump loop.
@@ -324,6 +354,71 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	return true
 }
 
+func (h *Holmes) gcHeapCheckAndDump() {
+	if !h.opts.GCHeapOpts.Enable {
+		return
+	}
+
+	memStats := new(runtime.MemStats)
+	runtime.ReadMemStats(memStats)
+
+	// TODO: we can only use NextGC for now since runtime haven't expose heapmarked yet
+	// and we hard code the gcPercent is 100 here.
+	// may introduce a new API debug.GCHeapMarked?
+	nextGC := memStats.NextGC
+	prevGC := nextGC / 2
+
+	memoryLimit, err := getMemoryLimit(h.opts.UseCGroup)
+	if err != nil {
+		h.logf("[Holmes] get memory limit failed: %v", err)
+		return
+	}
+	if memoryLimit == 0 {
+		h.logf("[Holmes] get unexpected memory limit 0")
+		return
+	}
+
+	ratio := int(100 * float64(prevGC) / float64(memoryLimit))
+	h.gcHeapStats.push(ratio)
+
+	if h.gcHeapCoolDownTime.After(time.Now()) {
+		h.logf("[Holmes] GC heap dump is in cooldown")
+		return
+	}
+
+	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered); triggered {
+		if h.gcHeapTriggered {
+			// already dump twice, mark it false
+			h.gcHeapTriggered = false
+			h.gcHeapCoolDownTime = time.Now().Add(h.opts.CoolDown)
+			h.gcHeapTriggerCount++
+		} else {
+			// force dump next time
+			h.gcHeapTriggered = true
+		}
+	}
+}
+
+// gcHeapProfile will dump profile twice when triggered once.
+// since the current memory profile will be merged after next GC cycle.
+// And we assume the finalizer will be called before next GC cycle(it will be usually).
+func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
+	c := h.opts.GCHeapOpts
+	if !force && !matchRule(h.gcHeapStats, gc, c.GCHeapTriggerPercentMin, c.GCHeapTriggerPercentAbs, c.GCHeapTriggerPercentDiff, NotSupportTypeMaxConfig) {
+		// let user know why this should not dump
+		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
+			c.GCHeapTriggerPercentMin, c.GCHeapTriggerPercentDiff, c.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
+			h.gcHeapStats.data, gc)
+
+		return false
+	}
+
+	var buf bytes.Buffer
+	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	h.writeProfileDataToFile(buf, gcHeap, gc)
+	return true
+}
+
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, currentStat int) {
 	binFileName := getBinaryFileName(h.opts.DumpPath, dumpType)
 
@@ -333,6 +428,11 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, currentStat)
+	case gcHeap:
+		opts := h.opts.GCHeapOpts
+		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+			opts.GCHeapTriggerPercentMin, opts.GCHeapTriggerPercentDiff, opts.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
+			h.gcHeapStats.data, currentStat)
 	case goroutine:
 		opts := h.opts.GrOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
