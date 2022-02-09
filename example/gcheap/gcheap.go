@@ -21,14 +21,14 @@ func main() {
 		holmes.WithDumpPath("/tmp"),
 		holmes.WithBinaryDump(),
 		holmes.WithMemoryLimit(100*1024*1024), // 100MB
-		holmes.WithGCHeapDump(5, 20, 40),
+		holmes.WithGCHeapDump(10, 20, 40),
 	)
 	h.EnableGCHeapDump().Start()
 	time.Sleep(time.Hour)
 }
 
 var (
-	base = make([]byte, 1024*1024*5) // exists long term.
+	base = make([]byte, 1024*1024*10) // 10 MB long live memory.
 )
 
 func randAlloc(wr http.ResponseWriter, req *http.Request) {
