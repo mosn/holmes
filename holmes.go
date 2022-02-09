@@ -116,7 +116,7 @@ func (h *Holmes) DisableMemDump() *Holmes {
 
 type foo struct {
 	h *Holmes
-	n [4]int64 // nolint:unused,structcheck, useless field, just make sure this struct is bigger than tiny size.
+	n [4]int64 // nolint:unused,structcheck // useless field, just make sure this struct is bigger than tiny size.
 }
 
 func finalizerCallback(f *foo) {
