@@ -5,11 +5,16 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/docker/go-units"
 )
 
 type options struct {
 	// whether use the cgroup to calc memory or not
 	UseCGroup bool
+
+	// overwrite the system level memory limitation when > 0.
+	memoryLimit uint64
 
 	// full path to put the profile files, default /tmp
 	DumpPath string
@@ -229,6 +234,14 @@ func WithGCHeapDump(min int, diff int, abs int) Option {
 		opts.GCHeapOpts.GCHeapTriggerPercentMin = min
 		opts.GCHeapOpts.GCHeapTriggerPercentDiff = diff
 		opts.GCHeapOpts.GCHeapTriggerPercentAbs = abs
+		return
+	})
+}
+
+// WithMemoryLimit overwrite the system level memory limit when it > 0.
+func WithMemoryLimit(limit uint64) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.memoryLimit = limit
 		return
 	})
 }

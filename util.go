@@ -123,8 +123,11 @@ func getNormalMemoryLimit() (uint64, error) {
 	return machineMemory.Total, nil
 }
 
-func getMemoryLimit(useCGroup bool) (uint64, error) {
-	if useCGroup {
+func getMemoryLimit(h *Holmes) (uint64, error) {
+	if h.opts.memoryLimit > 0 {
+		return h.opts.memoryLimit, nil
+	}
+	if h.opts.UseCGroup {
 		return getCGroupMemoryLimit()
 	}
 	return getNormalMemoryLimit()
@@ -199,7 +202,7 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 
 func getBinaryFileName(filePath string, dumpType configureType) string {
 	var (
-		binarySuffix = time.Now().Format("20060102150405") + ".bin"
+		binarySuffix = time.Now().Format("20060102150405.000") + ".bin"
 	)
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)

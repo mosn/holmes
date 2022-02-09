@@ -17,6 +17,7 @@ type Holmes struct {
 	// stats
 	changelog          int32
 	collectCount       int
+	gcCycleCount       int
 	threadTriggerCount int
 	cpuTriggerCount    int
 	memTriggerCount    int
@@ -98,6 +99,12 @@ func (h *Holmes) DisableCPUDump() *Holmes {
 // EnableMemDump enables the mem dump.
 func (h *Holmes) EnableMemDump() *Holmes {
 	h.opts.MemOpts.Enable = true
+	return h
+}
+
+// EnableGCHeapDump enables the GC heap dump.
+func (h *Holmes) EnableGCHeapDump() *Holmes {
+	h.opts.GCHeapOpts.Enable = true
 	return h
 }
 
@@ -368,7 +375,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	nextGC := memStats.NextGC
 	prevGC := nextGC / 2
 
-	memoryLimit, err := getMemoryLimit(h.opts.UseCGroup)
+	memoryLimit, err := getMemoryLimit(h)
 	if err != nil {
 		h.logf("[Holmes] get memory limit failed: %v", err)
 		return
@@ -380,6 +387,14 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	ratio := int(100 * float64(prevGC) / float64(memoryLimit))
 	h.gcHeapStats.push(ratio)
+
+	h.gcCycleCount++
+	if h.gcCycleCount < minCollectCyclesBeforeDumpStart {
+		// at least collect some cycles
+		// before start to judge and dump
+		h.logf("[Holmes] GC cycle warming up : %d", h.gcCycleCount)
+		return
+	}
 
 	if h.gcHeapCoolDownTime.After(time.Now()) {
 		h.logf("[Holmes] GC heap dump is in cooldown")
