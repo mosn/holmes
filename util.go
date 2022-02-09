@@ -127,6 +127,7 @@ func getMemoryLimit(h *Holmes) (uint64, error) {
 	if h.opts.memoryLimit > 0 {
 		return h.opts.memoryLimit, nil
 	}
+
 	if h.opts.UseCGroup {
 		return getCGroupMemoryLimit()
 	}

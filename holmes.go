@@ -116,7 +116,7 @@ func (h *Holmes) DisableMemDump() *Holmes {
 
 type foo struct {
 	h *Holmes
-	n [4]int64 // useless field, just make sure this struct is bigger than tiny size.
+	n [4]int64 // nolint:structcheck, useless field, just make sure this struct is bigger than tiny size.
 }
 
 func finalizerCallback(f *foo) {
@@ -373,15 +373,11 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	// and we hard code the gcPercent is 100 here.
 	// may introduce a new API debug.GCHeapMarked?
 	nextGC := memStats.NextGC
-	prevGC := nextGC / 2
+	prevGC := nextGC / 2 //nolint:gomnd
 
 	memoryLimit, err := getMemoryLimit(h)
-	if err != nil {
-		h.logf("[Holmes] get memory limit failed: %v", err)
-		return
-	}
-	if memoryLimit == 0 {
-		h.logf("[Holmes] get unexpected memory limit 0")
+	if memoryLimit == 0 || err != nil {
+		h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
 		return
 	}
 
@@ -431,6 +427,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, gcHeap, gc)
+
 	return true
 }
 
