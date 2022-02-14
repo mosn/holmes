@@ -114,9 +114,9 @@ func (h *Holmes) DisableMemDump() *Holmes {
 	return h
 }
 
+// it won't fit into tiny span since this struct contains point.
 type foo struct {
 	h *Holmes
-	n [4]int64 // nolint:unused,structcheck // useless field, just make sure this struct is bigger than tiny size.
 }
 
 func finalizerCallback(f *foo) {
