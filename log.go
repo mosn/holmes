@@ -85,7 +85,6 @@ func (h *Holmes) writeString(content string) {
 
 		old := logger
 
-		//nolint
 		h.opts.Logger.Store(newLogger)
 
 		_ = old.Close()
