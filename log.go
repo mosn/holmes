@@ -77,6 +77,7 @@ func (h *Holmes) writeString(content string) {
 
 		if err != nil {
 			h.opts.logOpts.RotateEnable = false
+
 			//nolint
 			fmt.Println("open new file err:", err, "from now on, it will be disabled split log")
 
