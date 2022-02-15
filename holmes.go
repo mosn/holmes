@@ -24,6 +24,9 @@ type Holmes struct {
 	grTriggerCount     int
 	gcHeapTriggerCount int
 
+	// channel for GC sweep finalizer event
+	finCh chan time.Time
+
 	// cooldown
 	threadCoolDownTime time.Time
 	cpuCoolDownTime    time.Time
@@ -123,7 +126,11 @@ func finalizerCallback(f *foo) {
 	// register the finalizer again
 	runtime.SetFinalizer(f, finalizerCallback)
 
-	f.h.gcHeapCheckAndDump()
+	select {
+	case f.h.finCh <- time.Time{}:
+	default:
+		f.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
+	}
 }
 
 func (h *Holmes) startGCCycleLoop() {
@@ -133,6 +140,8 @@ func (h *Holmes) startGCCycleLoop() {
 		h: h,
 	}
 	runtime.SetFinalizer(f, finalizerCallback)
+
+	go f.h.gcHeapCheckLoop()
 }
 
 // Start starts the dump loop of holmes.
@@ -361,11 +370,20 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	return true
 }
 
-func (h *Holmes) gcHeapCheckAndDump() {
-	if !h.opts.GCHeapOpts.Enable {
-		return
-	}
+func (h *Holmes) gcHeapCheckLoop() {
+	for {
+		// wait for the finalizer event
+		<-h.finCh
 
+		if !h.opts.GCHeapOpts.Enable {
+			return
+		}
+
+		h.gcHeapCheckAndDump()
+	}
+}
+
+func (h *Holmes) gcHeapCheckAndDump() {
 	memStats := new(runtime.MemStats)
 	runtime.ReadMemStats(memStats)
 
