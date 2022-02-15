@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/docker/go-units"
@@ -21,7 +22,7 @@ type options struct {
 	DumpFullStack bool
 
 	LogLevel int
-	Logger   *os.File
+	Logger   atomic.Value
 
 	// interval for dump loop, default 5s
 	CollectInterval time.Duration
@@ -55,20 +56,21 @@ func (f optionFunc) apply(opts *options) error {
 }
 
 func newOptions() *options {
-	return &options{
+	o := &options{
 		logOpts:         newLoggerOptions(),
 		GrOpts:          newGrOptions(),
 		MemOpts:         newMemOptions(),
 		CPUOpts:         newCPUOptions(),
 		ThreadOpts:      newThreadOptions(),
 		LogLevel:        LogLevelDebug,
-		Logger:          os.Stdout,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
 		DumpPath:        defaultDumpPath,
 		DumpProfileType: defaultDumpProfileType,
 		DumpFullStack:   false,
 	}
+	o.Logger.Store(os.Stdout)
+	return o
 }
 
 // WithCollectInterval : interval must be valid time duration string,
@@ -100,21 +102,23 @@ func WithCPUMax(max int) Option {
 // WithDumpPath set the dump path for holmes.
 func WithDumpPath(dumpPath string, loginfo ...string) Option {
 	return optionFunc(func(opts *options) (err error) {
+		var logger *os.File
 		f := path.Join(dumpPath, defaultLoggerName)
 		if len(loginfo) > 0 {
 			f = dumpPath + "/" + path.Join(loginfo...)
 		}
 		opts.DumpPath = filepath.Dir(f)
-		opts.Logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+		logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil && os.IsNotExist(err) {
 			if err = os.MkdirAll(opts.DumpPath, 0755); err != nil {
 				return
 			}
-			opts.Logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+			logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
 			if err != nil {
 				return
 			}
 		}
+		opts.Logger.Store(logger)
 		return
 	})
 }

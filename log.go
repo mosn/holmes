@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"time"
-	"unsafe"
 )
 
 // log write content to log file.
@@ -25,15 +24,25 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 }
 
 func (h *Holmes) writeString(content string) {
-	if _, err := h.opts.Logger.WriteString(content); err != nil {
+
+	logger, ok := h.opts.Logger.Load().(*os.File)
+	if !ok || logger == nil {
+		//nolint
+		fmt.Println("write fail,logger is null or assert fail ", content) // where to write this log?
+		return
+	}
+
+	if _, err := h.opts.Logger.Load().(*os.File).WriteString(content); err != nil {
+		//nolint
 		fmt.Println(err) // where to write this log?
+		return
 	}
 
 	if !h.opts.logOpts.RotateEnable {
 		return
 	}
 
-	state, err := h.opts.Logger.Stat()
+	state, err := logger.Stat()
 	if err != nil {
 		h.opts.logOpts.RotateEnable = false
 		//nolint
@@ -74,11 +83,9 @@ func (h *Holmes) writeString(content string) {
 			return
 		}
 
-		old := h.opts.Logger
+		old := logger
 		//nolint
-		if atomic.CompareAndSwapPointer((*unsafe.Pointer)(unsafe.Pointer(&h.opts.Logger)), unsafe.Pointer(h.opts.Logger), unsafe.Pointer(newLogger)) {
-			_ = old.Close()
-
-		}
+		h.opts.Logger.Store(newLogger)
+		_ = old.Close()
 	}
 }
