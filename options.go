@@ -108,12 +108,12 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 			f = dumpPath + "/" + path.Join(loginfo...)
 		}
 		opts.DumpPath = filepath.Dir(f)
-		logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+		logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil && os.IsNotExist(err) {
 			if err = os.MkdirAll(opts.DumpPath, 0755); err != nil {
 				return
 			}
-			logger, err = os.OpenFile(f, defaultLoggerFlags, defaultLoggerPerm)
+			logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
 			if err != nil {
 				return
 			}

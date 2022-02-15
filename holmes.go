@@ -377,7 +377,9 @@ func (h *Holmes) initEnvironment() {
 		getUsage = getUsageNormal
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
+
 	logger := h.opts.Logger.Load()
+
 	if (logger == nil || logger == os.Stdout) && h.opts.logOpts.RotateEnable {
 		h.opts.logOpts.RotateEnable = false
 	}
