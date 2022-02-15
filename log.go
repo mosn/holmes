@@ -24,7 +24,6 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 }
 
 func (h *Holmes) writeString(content string) {
-
 	logger, ok := h.opts.Logger.Load().(*os.File)
 	if !ok || logger == nil {
 		//nolint
