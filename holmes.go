@@ -371,7 +371,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	// TODO: we can only use NextGC for now since runtime haven't expose heapmarked yet
 	// and we hard code the gcPercent is 100 here.
-	// may introduce a new API debug.GCHeapMarked?
+	// may introduce a new API debug.GCHeapMarked? it can also has better performance(no STW).
 	nextGC := memStats.NextGC
 	prevGC := nextGC / 2 //nolint:gomnd
 
