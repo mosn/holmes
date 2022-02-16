@@ -115,6 +115,25 @@ func getCGroupMemoryLimit() (uint64, error) {
 	return limit, nil
 }
 
+func getNormalMemoryLimit() (uint64, error) {
+	machineMemory, err := mem_util.VirtualMemory()
+	if err != nil {
+		return 0, err
+	}
+	return machineMemory.Total, nil
+}
+
+func getMemoryLimit(h *Holmes) (uint64, error) {
+	if h.opts.memoryLimit > 0 {
+		return h.opts.memoryLimit, nil
+	}
+
+	if h.opts.UseCGroup {
+		return getCGroupMemoryLimit()
+	}
+	return getNormalMemoryLimit()
+}
+
 // return cpu percent, mem in MB, goroutine num
 // not use cgroup ver.
 func getUsageNormal() (float64, float64, int, int, error) {
@@ -184,7 +203,7 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 
 func getBinaryFileName(filePath string, dumpType configureType) string {
 	var (
-		binarySuffix = time.Now().Format("20060102150405") + ".bin"
+		binarySuffix = time.Now().Format("20060102150405.000") + ".bin"
 	)
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
