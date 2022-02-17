@@ -428,6 +428,7 @@ func (h *Holmes) getMemoryLimit() (uint64, error) {
 	if h.opts.UseCGroup {
 		return getCGroupMemoryLimit()
 	}
+
 	return getNormalMemoryLimit()
 }
 
