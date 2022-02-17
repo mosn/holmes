@@ -123,17 +123,6 @@ func getNormalMemoryLimit() (uint64, error) {
 	return machineMemory.Total, nil
 }
 
-func getMemoryLimit(h *Holmes) (uint64, error) {
-	if h.opts.memoryLimit > 0 {
-		return h.opts.memoryLimit, nil
-	}
-
-	if h.opts.UseCGroup {
-		return getCGroupMemoryLimit()
-	}
-	return getNormalMemoryLimit()
-}
-
 // return cpu percent, mem in MB, goroutine num
 // not use cgroup ver.
 func getUsageNormal() (float64, float64, int, int, error) {
