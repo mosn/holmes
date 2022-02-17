@@ -108,6 +108,7 @@ func (h *Holmes) EnableMemDump() *Holmes {
 // EnableGCHeapDump enables the GC heap dump.
 func (h *Holmes) EnableGCHeapDump() *Holmes {
 	h.opts.GCHeapOpts.Enable = true
+	h.finCh = make(chan time.Time)
 	return h
 }
 
@@ -117,23 +118,31 @@ func (h *Holmes) DisableMemDump() *Holmes {
 	return h
 }
 
-func finalizerCallback(h *Holmes) {
+func finalizerCallback(gc *gcHeapFinalizer) {
 	// register the finalizer again
-	runtime.SetFinalizer(h, finalizerCallback)
+	runtime.SetFinalizer(gc, finalizerCallback)
 
 	select {
-	case h.finCh <- time.Time{}:
+	case gc.h.finCh <- time.Time{}:
 	default:
-		h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
+		gc.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
 	}
+}
+
+type gcHeapFinalizer struct {
+	h *Holmes
 }
 
 func (h *Holmes) startGCCycleLoop() {
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
-	runtime.SetFinalizer(h, finalizerCallback)
+	gc := &gcHeapFinalizer{
+		h,
+	}
 
-	go h.gcHeapCheckLoop()
+	runtime.SetFinalizer(gc, finalizerCallback)
+
+	go gc.h.gcHeapCheckLoop()
 }
 
 // Start starts the dump loop of holmes.
