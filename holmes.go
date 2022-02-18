@@ -118,13 +118,13 @@ func (h *Holmes) EnableGCHeapDump() *Holmes {
 	return h
 }
 
+// DisableGCHeapDump disables the gc heap dump.
 func (h *Holmes) DisableGCHeapDump() *Holmes {
 	h.opts.GCHeapOpts.Enable = false
 	return h
 }
 
 func finalizerCallback(gc *gcHeapFinalizer) {
-
 	// disable or stop gc clean up normally
 	if !gc.h.opts.GCHeapOpts.Enable || atomic.LoadInt64(&gc.h.stopped) == 1 {
 		return
@@ -502,7 +502,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 
 	if h.opts.DumpProfileType == textDump {
 		// write to log
-		var res = data.String()
+		res := data.String()
 		if !h.opts.DumpFullStack {
 			res = trimResult(data)
 		}
