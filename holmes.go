@@ -25,7 +25,7 @@ type Holmes struct {
 	gcHeapTriggerCount int
 
 	// channel for GC sweep finalizer event
-	finCh chan time.Time
+	finCh chan struct{}
 
 	// cooldown
 	threadCoolDownTime time.Time
@@ -105,30 +105,42 @@ func (h *Holmes) EnableMemDump() *Holmes {
 	return h
 }
 
-// EnableGCHeapDump enables the GC heap dump.
-func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.GCHeapOpts.Enable = true
-	h.finCh = make(chan time.Time)
-	return h
-}
-
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
 	h.opts.MemOpts.Enable = false
 	return h
 }
 
+// EnableGCHeapDump enables the GC heap dump.
+func (h *Holmes) EnableGCHeapDump() *Holmes {
+	h.opts.GCHeapOpts.Enable = true
+	h.finCh = make(chan struct{})
+	return h
+}
+
+func (h *Holmes) DisableGCHeapDump() *Holmes {
+	h.opts.GCHeapOpts.Enable = false
+	return h
+}
+
 func finalizerCallback(gc *gcHeapFinalizer) {
+
+	// disable or stop gc clean up normally
+	if !gc.h.opts.GCHeapOpts.Enable || atomic.LoadInt64(&gc.h.stopped) == 1 {
+		return
+	}
+
 	// register the finalizer again
 	runtime.SetFinalizer(gc, finalizerCallback)
 
 	select {
-	case gc.h.finCh <- time.Time{}:
+	case gc.h.finCh <- struct{}{}:
 	default:
 		gc.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
 	}
 }
 
+// it won't fit into tiny span since this struct contains point.
 type gcHeapFinalizer struct {
 	h *Holmes
 }
