@@ -25,7 +25,7 @@ type Holmes struct {
 	gcHeapTriggerCount int
 
 	// channel for GC sweep finalizer event
-	finCh chan time.Time
+	finCh chan struct{}
 
 	// cooldown
 	threadCoolDownTime time.Time
@@ -105,43 +105,56 @@ func (h *Holmes) EnableMemDump() *Holmes {
 	return h
 }
 
-// EnableGCHeapDump enables the GC heap dump.
-func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.GCHeapOpts.Enable = true
-	return h
-}
-
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
 	h.opts.MemOpts.Enable = false
 	return h
 }
 
-// it won't fit into tiny span since this struct contains point.
-type foo struct {
-	h *Holmes
+// EnableGCHeapDump enables the GC heap dump.
+func (h *Holmes) EnableGCHeapDump() *Holmes {
+	h.opts.GCHeapOpts.Enable = true
+	h.finCh = make(chan struct{})
+	return h
 }
 
-func finalizerCallback(f *foo) {
+// DisableGCHeapDump disables the gc heap dump.
+func (h *Holmes) DisableGCHeapDump() *Holmes {
+	h.opts.GCHeapOpts.Enable = false
+	return h
+}
+
+func finalizerCallback(gc *gcHeapFinalizer) {
+	// disable or stop gc clean up normally
+	if !gc.h.opts.GCHeapOpts.Enable || atomic.LoadInt64(&gc.h.stopped) == 1 {
+		return
+	}
+
 	// register the finalizer again
-	runtime.SetFinalizer(f, finalizerCallback)
+	runtime.SetFinalizer(gc, finalizerCallback)
 
 	select {
-	case f.h.finCh <- time.Time{}:
+	case gc.h.finCh <- struct{}{}:
 	default:
-		f.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
+		gc.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
 	}
+}
+
+// it won't fit into tiny span since this struct contains point.
+type gcHeapFinalizer struct {
+	h *Holmes
 }
 
 func (h *Holmes) startGCCycleLoop() {
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
-	f := &foo{
-		h: h,
+	gc := &gcHeapFinalizer{
+		h,
 	}
-	runtime.SetFinalizer(f, finalizerCallback)
 
-	go f.h.gcHeapCheckLoop()
+	runtime.SetFinalizer(gc, finalizerCallback)
+
+	go gc.h.gcHeapCheckLoop()
 }
 
 // Start starts the dump loop of holmes.
@@ -393,7 +406,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	nextGC := memStats.NextGC
 	prevGC := nextGC / 2 //nolint:gomnd
 
-	memoryLimit, err := getMemoryLimit(h)
+	memoryLimit, err := h.getMemoryLimit()
 	if memoryLimit == 0 || err != nil {
 		h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
 		return
@@ -426,6 +439,18 @@ func (h *Holmes) gcHeapCheckAndDump() {
 			h.gcHeapTriggered = true
 		}
 	}
+}
+
+func (h *Holmes) getMemoryLimit() (uint64, error) {
+	if h.opts.memoryLimit > 0 {
+		return h.opts.memoryLimit, nil
+	}
+
+	if h.opts.UseCGroup {
+		return getCGroupMemoryLimit()
+	}
+
+	return getNormalMemoryLimit()
 }
 
 // gcHeapProfile will dump profile twice when triggered once.
@@ -477,7 +502,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 
 	if h.opts.DumpProfileType == textDump {
 		// write to log
-		var res = data.String()
+		res := data.String()
 		if !h.opts.DumpFullStack {
 			res = trimResult(data)
 		}
