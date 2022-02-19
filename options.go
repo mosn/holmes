@@ -59,6 +59,7 @@ type DumpOptions struct {
 
 // GetMemOpts return a copy of memOpts
 // if memOpts not exist return a empty memOptions and false
+// memOptions which be returned
 func (o *options) GetMemOpts() (memOptions, bool) {
 	if o.memOpts == nil {
 		return memOptions{}, false
@@ -219,6 +220,7 @@ func (g *grOptions) SetTriggerNumMax(new int) {
 
 func newGrOptions() *grOptions {
 	base := &baseOptions{
+		L:           sync.RWMutex{},
 		Enable:      false,
 		TriggerAbs:  defaultGoroutineTriggerAbs,
 		TriggerDiff: defaultGoroutineTriggerDiff,
@@ -239,7 +241,7 @@ func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 }
 
 type baseOptions struct {
-	L      *sync.RWMutex
+	L      sync.RWMutex
 	Enable bool
 	// mem/cpu/gcheap trigger minimum in percent, goroutine/thread trigger minimum in number
 	TriggerMin int
@@ -285,6 +287,7 @@ type memOptions struct {
 
 func newMemOptions() *memOptions {
 	base := &baseOptions{
+		L:           sync.RWMutex{},
 		Enable:      false,
 		TriggerMin:  defaultMemTriggerMin,
 		TriggerAbs:  defaultMemTriggerAbs,
@@ -376,6 +379,7 @@ type cpuOptions struct {
 
 func newCPUOptions() *cpuOptions {
 	base := &baseOptions{
+		L:           sync.RWMutex{},
 		Enable:      false,
 		TriggerMin:  defaultCPUTriggerMin,
 		TriggerAbs:  defaultCPUTriggerAbs,
