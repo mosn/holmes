@@ -246,6 +246,10 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 
 // memory start.
 func (h *Holmes) memCheckAndDump(mem int) {
+	coolDown := h.opts.CoolDown
+	// todo the better way is get a copy instead of locking it
+	h.opts.MemOpts.L.RLock()
+	defer h.opts.MemOpts.L.RUnlock()
 	if !h.opts.MemOpts.Enable {
 		return
 	}
@@ -256,17 +260,17 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	}
 
 	if triggered := h.memProfile(mem); triggered {
-		h.memCoolDownTime = time.Now().Add(h.opts.CoolDown)
+		h.memCoolDownTime = time.Now().Add(coolDown)
 		h.memTriggerCount++
 	}
 }
 
 func (h *Holmes) memProfile(rss int) bool {
 	c := h.opts.MemOpts
-	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff, NotSupportTypeMaxConfig) {
+	if !matchRule(h.memStats, rss, c.TriggerPercentMin, c.TriggerPercentAbs, c.TriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
-			c.MemTriggerPercentMin, c.MemTriggerPercentDiff, c.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
 		return false
@@ -456,7 +460,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	case mem:
 		opts := h.opts.MemOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
+			opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, currentStat)
 	case gcHeap:
 		opts := h.opts.GCHeapOpts

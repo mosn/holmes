@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,6 +34,9 @@ type options struct {
 	// the cooldown time after every type of dump
 	// interval for cooldown，default 1m
 	// the cpu/mem/goroutine have different cooldowns of their own
+
+	// todo should we move CoolDown into Gr/CPU/MEM/GCheap Opts and support
+	// set different `CoolDown` for different opts?
 	CoolDown time.Duration
 
 	// if current cpu usage percent is greater than CPUMaxPercent,
@@ -46,6 +50,21 @@ type options struct {
 	GCHeapOpts *gcHeapOptions
 	CPUOpts    *cpuOptions
 	ThreadOpts *threadOptions
+}
+
+//// GetMemOpts return a copy of MemOpts
+//// if MemOpts not exist return a empty memOptions and false
+//func (o *options)GetMemOpts() (memOptions,bool){
+//	if o.MemOpts == nil{
+//		return memOptions{},false
+//	}
+//	o.MemOpts.L.RLock()
+//	o.MemOpts.L.RUnlock()
+//	return *o.MemOpts,true
+//}
+
+func (o *options) SetCoolDown(new time.Duration) {
+	o.CoolDown = new
 }
 
 // Option holmes option type.
@@ -91,7 +110,11 @@ func WithCollectInterval(interval string) Option {
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CoolDown, err = time.ParseDuration(coolDown)
+		cd, err := time.ParseDuration(coolDown)
+		if err != nil {
+			return err
+		}
+		opts.SetCoolDown(cd)
 		return
 	})
 }
@@ -184,31 +207,66 @@ func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	})
 }
 
+type baseOptions struct {
+	L                  *sync.RWMutex
+	Enable             bool
+	TriggerPercentMin  int // mem/cpu/gr/gcheap trigger minimum in percent
+	TriggerPercentDiff int // mem/cpu/gr/gcheap  trigger diff in percent
+	TriggerPercentAbs  int // mem/cpu/gr/gcheap  trigger absolute in percent
+}
+
+func newDefaultBaseOptions() *baseOptions {
+	return &baseOptions{
+		L:                  &sync.RWMutex{},
+		Enable:             false,
+		TriggerPercentAbs:  defaultMemTriggerAbs,
+		TriggerPercentDiff: defaultMemTriggerDiff,
+		TriggerPercentMin:  defaultMemTriggerMin,
+	}
+}
+
+func (base *baseOptions) SetEnable(new bool) {
+	base.L.Lock()
+	defer base.L.Unlock()
+	base.Enable = new
+}
+
+func (base *baseOptions) SetTriggerPercentMin(new int) {
+	base.L.Lock()
+	defer base.L.Unlock()
+	base.TriggerPercentMin = new
+}
+
+func (base *baseOptions) SetTriggerPercentDiff(new int) {
+	base.L.Lock()
+	defer base.L.Unlock()
+	base.TriggerPercentDiff = new
+}
+
+func (base *baseOptions) SetTriggerPercentAbs(new int) {
+	base.L.Lock()
+	defer base.L.Unlock()
+	base.TriggerPercentAbs = new
+}
+
 type memOptions struct {
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > MemTriggerPercentMin && memory usage diff > MemTriggerPercentDiff
-	//   2. memory usage > MemTriggerPercentAbs
-	Enable                bool
-	MemTriggerPercentMin  int // mem trigger minimum in percent
-	MemTriggerPercentDiff int // mem trigger diff in percent
-	MemTriggerPercentAbs  int // mem trigger absolute in percent
+	//   1. memory usage > TriggerPercentMin && memory usage diff > TriggerPercentDiff
+	//   2. memory usage > TriggerPercentAbs
+	*baseOptions
 }
 
 func newMemOptions() *memOptions {
-	return &memOptions{
-		Enable:                false,
-		MemTriggerPercentAbs:  defaultMemTriggerAbs,
-		MemTriggerPercentDiff: defaultMemTriggerDiff,
-		MemTriggerPercentMin:  defaultMemTriggerMin,
-	}
+	base := newDefaultBaseOptions()
+	return &memOptions{base}
 }
 
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.MemOpts.MemTriggerPercentMin = min
-		opts.MemOpts.MemTriggerPercentDiff = diff
-		opts.MemOpts.MemTriggerPercentAbs = abs
+		opts.MemOpts.SetTriggerPercentMin(min)
+		opts.MemOpts.SetTriggerPercentDiff(diff)
+		opts.MemOpts.SetTriggerPercentAbs(abs)
 		return
 	})
 }
