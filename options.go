@@ -41,9 +41,9 @@ type options struct {
 
 	logOpts    *loggerOptions
 	GrOpts     *grOptions
-	MemOpts    *memOptions
+	memOpts    *memOptions
 	GCHeapOpts *gcHeapOptions
-	CPUOpts    *cpuOptions
+	cpuOpts    *cpuOptions
 	ThreadOpts *threadOptions
 }
 
@@ -57,26 +57,26 @@ type DumpOptions struct {
 	DumpFullStack bool
 }
 
-// GetMemOpts return a copy of MemOpts
-// if MemOpts not exist return a empty memOptions and false
+// GetMemOpts return a copy of memOpts
+// if memOpts not exist return a empty memOptions and false
 func (o *options) GetMemOpts() (memOptions, bool) {
-	if o.MemOpts == nil {
+	if o.memOpts == nil {
 		return memOptions{}, false
 	}
-	o.MemOpts.L.RLock()
-	o.MemOpts.L.RUnlock()
-	return *o.MemOpts, true
+	o.memOpts.L.RLock()
+	o.memOpts.L.RUnlock()
+	return *o.memOpts, true
 }
 
-// GetCPUOpts return a copy of CPUOpts
-// if CPUOpts not exist return a empty cpuOptions and false
+// GetCPUOpts return a copy of cpuOpts
+// if cpuOpts not exist return a empty cpuOptions and false
 func (o *options) GetCPUOpts() (cpuOptions, bool) {
-	if o.CPUOpts == nil {
+	if o.cpuOpts == nil {
 		return cpuOptions{}, false
 	}
-	o.CPUOpts.L.RLock()
-	o.CPUOpts.L.RUnlock()
-	return *o.CPUOpts, true
+	o.cpuOpts.L.RLock()
+	o.cpuOpts.L.RUnlock()
+	return *o.cpuOpts, true
 }
 
 func (o *options) SetCoolDown(new time.Duration) {
@@ -98,9 +98,9 @@ func newOptions() *options {
 	o := &options{
 		logOpts:         newLoggerOptions(),
 		GrOpts:          newGrOptions(),
-		MemOpts:         newMemOptions(),
+		memOpts:         newMemOptions(),
 		GCHeapOpts:      newGCHeapOptions(),
-		CPUOpts:         newCPUOptions(),
+		cpuOpts:         newCPUOptions(),
 		ThreadOpts:      newThreadOptions(),
 		LogLevel:        LogLevelDebug,
 		CollectInterval: defaultInterval,
@@ -282,9 +282,9 @@ func newMemOptions() *memOptions {
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.MemOpts.SetTriggerPercentMin(min)
-		opts.MemOpts.SetTriggerPercentDiff(diff)
-		opts.MemOpts.SetTriggerPercentAbs(abs)
+		opts.memOpts.SetTriggerPercentMin(min)
+		opts.memOpts.SetTriggerPercentDiff(diff)
+		opts.memOpts.SetTriggerPercentAbs(abs)
 		return
 	})
 }
@@ -367,9 +367,9 @@ func newCPUOptions() *cpuOptions {
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CPUOpts.SetTriggerPercentMin(min)
-		opts.CPUOpts.SetTriggerPercentDiff(diff)
-		opts.CPUOpts.SetTriggerPercentAbs(abs)
+		opts.cpuOpts.SetTriggerPercentMin(min)
+		opts.cpuOpts.SetTriggerPercentDiff(diff)
+		opts.cpuOpts.SetTriggerPercentAbs(abs)
 		return
 	})
 }

@@ -89,19 +89,19 @@ func (h *Holmes) DisableGoroutineDump() *Holmes {
 
 // EnableCPUDump enables the CPU dump.
 func (h *Holmes) EnableCPUDump() *Holmes {
-	h.opts.CPUOpts.Enable = true
+	h.opts.cpuOpts.SetEnable(true)
 	return h
 }
 
 // DisableCPUDump disables the CPU dump.
 func (h *Holmes) DisableCPUDump() *Holmes {
-	h.opts.CPUOpts.Enable = false
+	h.opts.cpuOpts.SetEnable(false)
 	return h
 }
 
 // EnableMemDump enables the mem dump.
 func (h *Holmes) EnableMemDump() *Holmes {
-	h.opts.MemOpts.Enable = true
+	h.opts.memOpts.SetEnable(true)
 	return h
 }
 
@@ -113,7 +113,7 @@ func (h *Holmes) EnableGCHeapDump() *Holmes {
 
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
-	h.opts.MemOpts.Enable = false
+	h.opts.memOpts.SetEnable(false)
 	return h
 }
 
@@ -480,7 +480,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 
 	switch dumpType {
 	//case mem:
-	//	opts := h.opts.MemOpts
+	//	opts := h.opts.memOpts
 	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 	//		opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
 	//		h.memStats.data, currentStat)
