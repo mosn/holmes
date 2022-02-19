@@ -107,13 +107,13 @@ func (h *Holmes) EnableMemDump() *Holmes {
 
 // EnableGCHeapDump enables the GC heap dump.
 func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.GCHeapOpts.Enable = true
+	h.opts.gCHeapOpts.SetEnable(true)
 	return h
 }
 
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
-	h.opts.memOpts.SetEnable(false)
+	h.opts.gCHeapOpts.SetEnable(false)
 	return h
 }
 
@@ -409,15 +409,22 @@ func (h *Holmes) gcHeapCheckLoop() {
 		// wait for the finalizer event
 		<-h.finCh
 
-		if !h.opts.GCHeapOpts.Enable {
-			return
-		}
-
 		h.gcHeapCheckAndDump()
 	}
 }
 
 func (h *Holmes) gcHeapCheckAndDump() {
+	// get a copy instead of locking it
+	coolDown := h.opts.CoolDown
+
+	gcHeapOpts, exist := h.opts.GetGcHeapOpts()
+	if !exist {
+		h.logf("gcHeap option has not been initialized")
+		return
+	}
+	if !gcHeapOpts.Enable {
+		return
+	}
 	memStats := new(runtime.MemStats)
 	runtime.ReadMemStats(memStats)
 
@@ -449,11 +456,11 @@ func (h *Holmes) gcHeapCheckAndDump() {
 		return
 	}
 
-	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered); triggered {
+	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered, &gcHeapOpts); triggered {
 		if h.gcHeapTriggered {
 			// already dump twice, mark it false
 			h.gcHeapTriggered = false
-			h.gcHeapCoolDownTime = time.Now().Add(h.opts.CoolDown)
+			h.gcHeapCoolDownTime = time.Now().Add(coolDown)
 			h.gcHeapTriggerCount++
 		} else {
 			// force dump next time
@@ -465,12 +472,12 @@ func (h *Holmes) gcHeapCheckAndDump() {
 // gcHeapProfile will dump profile twice when triggered once.
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
-func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
-	c := h.opts.GCHeapOpts
-	if !force && !matchRule(h.gcHeapStats, gc, c.GCHeapTriggerPercentMin, c.GCHeapTriggerPercentAbs, c.GCHeapTriggerPercentDiff, NotSupportTypeMaxConfig) {
+func (h *Holmes) gcHeapProfile(gc int, force bool, c *gcHeapOptions) bool {
+	if !force && !matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
-			c.GCHeapTriggerPercentMin, c.GCHeapTriggerPercentDiff, c.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
+			NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, gc)
 
 		return false
@@ -478,7 +485,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, gcHeap, gc)
+	h.writeGcHeapProfileDataToFile(buf, c, gcHeap, gc)
 
 	return true
 }
@@ -510,30 +517,12 @@ func (h *Holmes) writeThreadProfileDataToFile(data bytes.Buffer, opts *threadOpt
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
-func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, currentStat int) {
+func (h *Holmes) writeGcHeapProfileDataToFile(data bytes.Buffer, opts *gcHeapOptions, dumpType configureType, currentStat int) {
+	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
+		NotSupportTypeMaxConfig,
+		h.gcHeapStats.data, currentStat)
 
-	switch dumpType {
-	//case mem:
-	//	opts := h.opts.memOpts
-	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-	//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, NotSupportTypeMaxConfig,
-	//		h.memStats.data, currentStat)
-	case gcHeap:
-		opts := h.opts.GCHeapOpts
-		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.GCHeapTriggerPercentMin, opts.GCHeapTriggerPercentDiff, opts.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
-			h.gcHeapStats.data, currentStat)
-		//case goroutine:
-		//	opts := h.opts.grOpts
-		//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, opts.GoroutineTriggerNumMax,
-		//		h.grNumStats.data, currentStat)
-		//case thread:
-		//	opts := h.opts.threadOpts
-		//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		//		opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
-		//		h.threadStats.data, currentStat)
-	}
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 

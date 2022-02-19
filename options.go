@@ -42,7 +42,7 @@ type options struct {
 	logOpts    *loggerOptions
 	grOpts     *grOptions
 	memOpts    *memOptions
-	GCHeapOpts *gcHeapOptions
+	gCHeapOpts *gcHeapOptions
 	cpuOpts    *cpuOptions
 	threadOpts *threadOptions
 }
@@ -102,6 +102,17 @@ func (o *options) GetThreadOpts() (threadOptions, bool) {
 	return *o.threadOpts, true
 }
 
+// GetGcHeapOpts return a copy of memOpts
+// if gCHeapOpts not exist return a empty gcHeapOptions and false
+func (o *options) GetGcHeapOpts() (gcHeapOptions, bool) {
+	if o.gCHeapOpts == nil {
+		return gcHeapOptions{}, false
+	}
+	o.gCHeapOpts.L.RLock()
+	defer o.gCHeapOpts.L.RUnlock()
+	return *o.gCHeapOpts, true
+}
+
 func (o *options) SetCoolDown(new time.Duration) {
 	o.CoolDown = new
 }
@@ -122,7 +133,7 @@ func newOptions() *options {
 		logOpts:         newLoggerOptions(),
 		grOpts:          newGrOptions(),
 		memOpts:         newMemOptions(),
-		GCHeapOpts:      newGCHeapOptions(),
+		gCHeapOpts:      newGCHeapOptions(),
 		cpuOpts:         newCPUOptions(),
 		threadOpts:      newThreadOptions(),
 		LogLevel:        LogLevelDebug,
@@ -230,13 +241,11 @@ func (g *grOptions) SetTriggerNumMax(new int) {
 }
 
 func newGrOptions() *grOptions {
-	base := &baseOptions{
-		L:           sync.RWMutex{},
-		Enable:      false,
-		TriggerAbs:  defaultGoroutineTriggerAbs,
-		TriggerDiff: defaultGoroutineTriggerDiff,
-		TriggerMin:  defaultGoroutineTriggerMin,
-	}
+	base := newBaseOptions(
+		false,
+		defaultGoroutineTriggerMin,
+		defaultGoroutineTriggerAbs,
+		defaultGoroutineTriggerDiff)
 	return &grOptions{baseOptions: base}
 }
 
@@ -262,6 +271,16 @@ type baseOptions struct {
 
 	// mem/cpu/gcheap/goroutine/thread trigger diff in percent
 	TriggerDiff int
+}
+
+func newBaseOptions(enable bool, triggerMin, triggerAbs, triggerDiff int) *baseOptions {
+	return &baseOptions{
+		L:           sync.RWMutex{},
+		Enable:      enable,
+		TriggerMin:  triggerMin,
+		TriggerAbs:  triggerAbs,
+		TriggerDiff: triggerDiff,
+	}
 }
 
 func (base *baseOptions) SetEnable(new bool) {
@@ -297,13 +316,11 @@ type memOptions struct {
 }
 
 func newMemOptions() *memOptions {
-	base := &baseOptions{
-		L:           sync.RWMutex{},
-		Enable:      false,
-		TriggerMin:  defaultMemTriggerMin,
-		TriggerAbs:  defaultMemTriggerAbs,
-		TriggerDiff: defaultMemTriggerDiff,
-	}
+	base := newBaseOptions(
+		false,
+		defaultMemTriggerMin,
+		defaultMemTriggerAbs,
+		defaultMemTriggerDiff)
 	return &memOptions{base}
 }
 
@@ -319,29 +336,26 @@ func WithMemDump(min int, diff int, abs int) Option {
 
 type gcHeapOptions struct {
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. GC heap usage > GCHeapTriggerPercentMin && GC heap usage diff > GCHeapTriggerPercentDiff
-	//   2. GC heap usage > GCHeapTriggerPercentAbs
-	Enable                   bool
-	GCHeapTriggerPercentMin  int // GC heap trigger minimum in percent
-	GCHeapTriggerPercentDiff int // GC heap trigger diff in percent
-	GCHeapTriggerPercentAbs  int // GC heap trigger absolute in percent
+	//   1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
+	//   2. GC heap usage > TriggerAbs
+	*baseOptions
 }
 
 func newGCHeapOptions() *gcHeapOptions {
-	return &gcHeapOptions{
-		Enable:                   false,
-		GCHeapTriggerPercentAbs:  defaultGCHeapTriggerAbs,
-		GCHeapTriggerPercentDiff: defaultGCHeapTriggerDiff,
-		GCHeapTriggerPercentMin:  defaultGCHeapTriggerMin,
-	}
+	base := newBaseOptions(
+		false,
+		defaultGCHeapTriggerMin,
+		defaultGCHeapTriggerAbs,
+		defaultGCHeapTriggerDiff)
+	return &gcHeapOptions{base}
 }
 
 // WithGCHeapDump set the GC heap dump options.
 func WithGCHeapDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.GCHeapOpts.GCHeapTriggerPercentMin = min
-		opts.GCHeapOpts.GCHeapTriggerPercentDiff = diff
-		opts.GCHeapOpts.GCHeapTriggerPercentAbs = abs
+		opts.gCHeapOpts.SetTriggerMin(min)
+		opts.gCHeapOpts.SetTriggerDiff(diff)
+		opts.gCHeapOpts.SetTriggerAbs(abs)
 		return
 	})
 }
@@ -359,13 +373,11 @@ type threadOptions struct {
 }
 
 func newThreadOptions() *threadOptions {
-	base := &baseOptions{
-		L:           sync.RWMutex{},
-		Enable:      false,
-		TriggerMin:  defaultMemTriggerMin,
-		TriggerAbs:  defaultMemTriggerAbs,
-		TriggerDiff: defaultMemTriggerDiff,
-	}
+	base := newBaseOptions(
+		false,
+		defaultMemTriggerMin,
+		defaultMemTriggerAbs,
+		defaultMemTriggerDiff)
 	return &threadOptions{base}
 }
 
@@ -388,13 +400,11 @@ type cpuOptions struct {
 }
 
 func newCPUOptions() *cpuOptions {
-	base := &baseOptions{
-		L:           sync.RWMutex{},
-		Enable:      false,
-		TriggerMin:  defaultCPUTriggerMin,
-		TriggerAbs:  defaultCPUTriggerAbs,
-		TriggerDiff: defaultCPUTriggerDiff,
-	}
+	base := newBaseOptions(
+		false,
+		defaultCPUTriggerMin,
+		defaultCPUTriggerAbs,
+		defaultCPUTriggerDiff)
 	return &cpuOptions{base}
 }
 
