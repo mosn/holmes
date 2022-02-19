@@ -77,13 +77,13 @@ func (h *Holmes) DisableThreadDump() *Holmes {
 
 // EnableGoroutineDump enables the goroutine dump.
 func (h *Holmes) EnableGoroutineDump() *Holmes {
-	h.opts.GrOpts.Enable = true
+	h.opts.grOpts.SetEnable(true)
 	return h
 }
 
 // DisableGoroutineDump disables the goroutine dump.
 func (h *Holmes) DisableGoroutineDump() *Holmes {
-	h.opts.GrOpts.Enable = false
+	h.opts.grOpts.SetEnable(false)
 	return h
 }
 
@@ -213,7 +213,15 @@ func (h *Holmes) startDumpLoop() {
 
 // goroutine start.
 func (h *Holmes) goroutineCheckAndDump(gNum int) {
-	if !h.opts.GrOpts.Enable {
+	// get a copy instead of locking it
+	coolDown := h.opts.CoolDown
+
+	grOpts, exist := h.opts.GetGrOpts()
+	if !exist {
+		h.logf("goroutine option has not been initialized")
+		return
+	}
+	if !grOpts.Enable {
 		return
 	}
 
@@ -222,25 +230,24 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 
-	if triggered := h.goroutineProfile(gNum); triggered {
-		h.grCoolDownTime = time.Now().Add(h.opts.CoolDown)
+	if triggered := h.goroutineProfile(gNum, &grOpts); triggered {
+		h.grCoolDownTime = time.Now().Add(coolDown)
 		h.grTriggerCount++
 	}
 }
 
-func (h *Holmes) goroutineProfile(gNum int) bool {
-	c := h.opts.GrOpts
-	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumMax) {
+func (h *Holmes) goroutineProfile(gNum int, c *grOptions) bool {
+
+	if !matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax) {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
-			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
+			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
 		return false
 	}
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, goroutine, gNum)
-
+	h.writeGrProfileDataToFile(buf, c, goroutine, gNum)
 	return true
 }
 
@@ -470,8 +477,18 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 
 func (h *Holmes) writeMemProfileDataToFile(data bytes.Buffer, opts *memOptions, dumpType configureType, currentStat int) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, NotSupportTypeMaxConfig,
+		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
+		NotSupportTypeMaxConfig,
 		h.memStats.data, currentStat)
+
+	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
+}
+
+func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts *grOptions, dumpType configureType, currentStat int) {
+	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
+		opts.GoroutineTriggerNumMax,
+		h.grNumStats.data, currentStat)
 
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
@@ -489,11 +506,11 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.GCHeapTriggerPercentMin, opts.GCHeapTriggerPercentDiff, opts.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, currentStat)
-	case goroutine:
-		opts := h.opts.GrOpts
-		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs, opts.GoroutineTriggerNumMax,
-			h.grNumStats.data, currentStat)
+	//case goroutine:
+	//	opts := h.opts.grOpts
+	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+	//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, opts.GoroutineTriggerNumMax,
+	//		h.grNumStats.data, currentStat)
 	case thread:
 		opts := h.opts.ThreadOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],

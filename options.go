@@ -40,7 +40,7 @@ type options struct {
 	CPUMaxPercent int
 
 	logOpts    *loggerOptions
-	GrOpts     *grOptions
+	grOpts     *grOptions
 	memOpts    *memOptions
 	GCHeapOpts *gcHeapOptions
 	cpuOpts    *cpuOptions
@@ -64,7 +64,7 @@ func (o *options) GetMemOpts() (memOptions, bool) {
 		return memOptions{}, false
 	}
 	o.memOpts.L.RLock()
-	o.memOpts.L.RUnlock()
+	defer o.memOpts.L.RUnlock()
 	return *o.memOpts, true
 }
 
@@ -75,8 +75,19 @@ func (o *options) GetCPUOpts() (cpuOptions, bool) {
 		return cpuOptions{}, false
 	}
 	o.cpuOpts.L.RLock()
-	o.cpuOpts.L.RUnlock()
+	defer o.cpuOpts.L.RUnlock()
 	return *o.cpuOpts, true
+}
+
+// GetGrOpts return a copy of memOpts
+// if grOpts not exist return a empty grOptions and false
+func (o *options) GetGrOpts() (grOptions, bool) {
+	if o.grOpts == nil {
+		return grOptions{}, false
+	}
+	o.grOpts.L.RLock()
+	defer o.grOpts.L.RUnlock()
+	return *o.grOpts, true
 }
 
 func (o *options) SetCoolDown(new time.Duration) {
@@ -97,7 +108,7 @@ func (f optionFunc) apply(opts *options) error {
 func newOptions() *options {
 	o := &options{
 		logOpts:         newLoggerOptions(),
-		GrOpts:          newGrOptions(),
+		grOpts:          newGrOptions(),
 		memOpts:         newMemOptions(),
 		GCHeapOpts:      newGCHeapOptions(),
 		cpuOpts:         newCPUOptions(),
@@ -196,31 +207,33 @@ func withDumpProfileType(profileType dumpProfileType) Option {
 
 type grOptions struct {
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
-	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > GoroutineTriggerPercentDiff
+	//   1. goroutine_num > TriggerMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > TriggerDiff
 	//   2. goroutine_num > GoroutineTriggerNumAbsNum && goroutine_num < GoroutineTriggerNumMax
-	Enable                      bool
-	GoroutineTriggerNumMin      int // goroutine trigger min in number
-	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
-	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
-	GoroutineTriggerNumMax      int // goroutine trigger max in number
+	*baseOptions
+	GoroutineTriggerNumMax int // goroutine trigger max in number
+}
+
+func (g *grOptions) SetTriggerNumMax(new int) {
+	g.GoroutineTriggerNumMax = new
 }
 
 func newGrOptions() *grOptions {
-	return &grOptions{
-		Enable:                      false,
-		GoroutineTriggerNumAbs:      defaultGoroutineTriggerAbs,
-		GoroutineTriggerPercentDiff: defaultGoroutineTriggerDiff,
-		GoroutineTriggerNumMin:      defaultGoroutineTriggerMin,
+	base := &baseOptions{
+		Enable:      false,
+		TriggerAbs:  defaultGoroutineTriggerAbs,
+		TriggerDiff: defaultGoroutineTriggerDiff,
+		TriggerMin:  defaultGoroutineTriggerMin,
 	}
+	return &grOptions{baseOptions: base}
 }
 
 // WithGoroutineDump set the goroutine dump options.
 func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.GrOpts.GoroutineTriggerNumMin = min
-		opts.GrOpts.GoroutineTriggerPercentDiff = diff
-		opts.GrOpts.GoroutineTriggerNumAbs = abs
-		opts.GrOpts.GoroutineTriggerNumMax = max
+		opts.grOpts.SetTriggerMin(min)
+		opts.grOpts.SetTriggerDiff(diff)
+		opts.grOpts.SetTriggerAbs(abs)
+		opts.grOpts.SetTriggerNumMax(max)
 		return
 	})
 }
@@ -244,19 +257,19 @@ func (base *baseOptions) SetEnable(new bool) {
 	base.Enable = new
 }
 
-func (base *baseOptions) SetTriggerPercentMin(new int) {
+func (base *baseOptions) SetTriggerMin(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
 	base.TriggerMin = new
 }
 
-func (base *baseOptions) SetTriggerPercentDiff(new int) {
+func (base *baseOptions) SetTriggerDiff(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
 	base.TriggerDiff = new
 }
 
-func (base *baseOptions) SetTriggerPercentAbs(new int) {
+func (base *baseOptions) SetTriggerAbs(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
 	base.TriggerAbs = new
@@ -283,9 +296,9 @@ func newMemOptions() *memOptions {
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.memOpts.SetTriggerPercentMin(min)
-		opts.memOpts.SetTriggerPercentDiff(diff)
-		opts.memOpts.SetTriggerPercentAbs(abs)
+		opts.memOpts.SetTriggerMin(min)
+		opts.memOpts.SetTriggerDiff(diff)
+		opts.memOpts.SetTriggerAbs(abs)
 		return
 	})
 }
@@ -374,9 +387,9 @@ func newCPUOptions() *cpuOptions {
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.SetTriggerPercentMin(min)
-		opts.cpuOpts.SetTriggerPercentDiff(diff)
-		opts.cpuOpts.SetTriggerPercentAbs(abs)
+		opts.cpuOpts.SetTriggerMin(min)
+		opts.cpuOpts.SetTriggerDiff(diff)
+		opts.cpuOpts.SetTriggerAbs(abs)
 		return
 	})
 }
