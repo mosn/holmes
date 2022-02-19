@@ -12,7 +12,7 @@ import (
 
 // Holmes is a self-aware profile dumper.
 type Holmes struct {
-	*options
+	opts *options
 
 	// stats
 	changelog          int32
@@ -51,11 +51,11 @@ type Holmes struct {
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
-		options: newOptions(),
+		opts: newOptions(),
 	}
 
 	for _, opt := range opts {
-		if err := opt.apply(holmes.options); err != nil {
+		if err := opt.apply(holmes.opts); err != nil {
 			return nil, err
 		}
 	}
@@ -65,55 +65,55 @@ func New(opts ...Option) (*Holmes, error) {
 
 // EnableThreadDump enables the goroutine dump.
 func (h *Holmes) EnableThreadDump() *Holmes {
-	h.ThreadOpts.Enable = true
+	h.opts.ThreadOpts.Enable = true
 	return h
 }
 
 // DisableThreadDump disables the goroutine dump.
 func (h *Holmes) DisableThreadDump() *Holmes {
-	h.ThreadOpts.Enable = false
+	h.opts.ThreadOpts.Enable = false
 	return h
 }
 
 // EnableGoroutineDump enables the goroutine dump.
 func (h *Holmes) EnableGoroutineDump() *Holmes {
-	h.GrOpts.Enable = true
+	h.opts.GrOpts.Enable = true
 	return h
 }
 
 // DisableGoroutineDump disables the goroutine dump.
 func (h *Holmes) DisableGoroutineDump() *Holmes {
-	h.GrOpts.Enable = false
+	h.opts.GrOpts.Enable = false
 	return h
 }
 
 // EnableCPUDump enables the CPU dump.
 func (h *Holmes) EnableCPUDump() *Holmes {
-	h.CPUOpts.Enable = true
+	h.opts.CPUOpts.Enable = true
 	return h
 }
 
 // DisableCPUDump disables the CPU dump.
 func (h *Holmes) DisableCPUDump() *Holmes {
-	h.CPUOpts.Enable = false
+	h.opts.CPUOpts.Enable = false
 	return h
 }
 
 // EnableMemDump enables the mem dump.
 func (h *Holmes) EnableMemDump() *Holmes {
-	h.MemOpts.Enable = true
+	h.opts.MemOpts.Enable = true
 	return h
 }
 
 // EnableGCHeapDump enables the GC heap dump.
 func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.GCHeapOpts.Enable = true
+	h.opts.GCHeapOpts.Enable = true
 	return h
 }
 
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
-	h.MemOpts.Enable = false
+	h.opts.MemOpts.Enable = false
 	return h
 }
 
@@ -172,7 +172,7 @@ func (h *Holmes) startDumpLoop() {
 	h.threadStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	// dump loop
-	ticker := time.NewTicker(h.CollectInterval)
+	ticker := time.NewTicker(h.opts.CollectInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		if atomic.LoadInt64(&h.stopped) == 1 {
@@ -213,7 +213,7 @@ func (h *Holmes) startDumpLoop() {
 
 // goroutine start.
 func (h *Holmes) goroutineCheckAndDump(gNum int) {
-	if !h.GrOpts.Enable {
+	if !h.opts.GrOpts.Enable {
 		return
 	}
 
@@ -223,13 +223,13 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	}
 
 	if triggered := h.goroutineProfile(gNum); triggered {
-		h.grCoolDownTime = time.Now().Add(h.CoolDown)
+		h.grCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.grTriggerCount++
 	}
 }
 
 func (h *Holmes) goroutineProfile(gNum int) bool {
-	c := h.GrOpts
+	c := h.opts.GrOpts
 	if !matchRule(h.grNumStats, gNum, c.GoroutineTriggerNumMin, c.GoroutineTriggerNumAbs, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumMax) {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
 			c.GoroutineTriggerNumMin, c.GoroutineTriggerPercentDiff, c.GoroutineTriggerNumAbs,
@@ -238,7 +238,7 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 	}
 
 	var buf bytes.Buffer
-	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.DumpProfileType)) // nolint: errcheck
+	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, goroutine, gNum)
 
 	return true
@@ -246,7 +246,7 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 
 // memory start.
 func (h *Holmes) memCheckAndDump(mem int) {
-	if !h.MemOpts.Enable {
+	if !h.opts.MemOpts.Enable {
 		return
 	}
 
@@ -256,13 +256,13 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	}
 
 	if triggered := h.memProfile(mem); triggered {
-		h.memCoolDownTime = time.Now().Add(h.CoolDown)
+		h.memCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.memTriggerCount++
 	}
 }
 
 func (h *Holmes) memProfile(rss int) bool {
-	c := h.MemOpts
+	c := h.opts.MemOpts
 	if !matchRule(h.memStats, rss, c.MemTriggerPercentMin, c.MemTriggerPercentAbs, c.MemTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
@@ -273,14 +273,14 @@ func (h *Holmes) memProfile(rss int) bool {
 	}
 
 	var buf bytes.Buffer
-	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.DumpProfileType)) // nolint: errcheck
+	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, mem, rss)
 	return true
 }
 
 // thread start.
 func (h *Holmes) threadCheckAndDump(threadNum int) {
-	if !h.ThreadOpts.Enable {
+	if !h.opts.ThreadOpts.Enable {
 		return
 	}
 
@@ -290,13 +290,13 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	}
 
 	if triggered := h.threadProfile(threadNum); triggered {
-		h.threadCoolDownTime = time.Now().Add(h.CoolDown)
+		h.threadCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.threadTriggerCount++
 	}
 }
 
 func (h *Holmes) threadProfile(curThreadNum int) bool {
-	c := h.ThreadOpts
+	c := h.opts.ThreadOpts
 	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
@@ -307,8 +307,8 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 	}
 
 	var buf bytes.Buffer
-	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.DumpProfileType)) // nolint: errcheck
-	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.DumpProfileType))    // nolint: errcheck
+	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
 
 	h.writeProfileDataToFile(buf, thread, curThreadNum)
 
@@ -319,7 +319,7 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 
 // cpu start.
 func (h *Holmes) cpuCheckAndDump(cpu int) {
-	if !h.CPUOpts.Enable {
+	if !h.opts.CPUOpts.Enable {
 		return
 	}
 
@@ -329,13 +329,13 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 	}
 
 	if triggered := h.cpuProfile(cpu); triggered {
-		h.cpuCoolDownTime = time.Now().Add(h.CoolDown)
+		h.cpuCoolDownTime = time.Now().Add(h.opts.CoolDown)
 		h.cpuTriggerCount++
 	}
 }
 
 func (h *Holmes) cpuProfile(curCPUUsage int) bool {
-	c := h.CPUOpts
+	c := h.opts.CPUOpts
 	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
@@ -345,7 +345,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 		return false
 	}
 
-	binFileName := getBinaryFileName(h.DumpPath, cpu)
+	binFileName := getBinaryFileName(h.opts.DumpPath, cpu)
 
 	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
 	if err != nil {
@@ -375,7 +375,7 @@ func (h *Holmes) gcHeapCheckLoop() {
 		// wait for the finalizer event
 		<-h.finCh
 
-		if !h.GCHeapOpts.Enable {
+		if !h.opts.GCHeapOpts.Enable {
 			return
 		}
 
@@ -419,7 +419,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 		if h.gcHeapTriggered {
 			// already dump twice, mark it false
 			h.gcHeapTriggered = false
-			h.gcHeapCoolDownTime = time.Now().Add(h.CoolDown)
+			h.gcHeapCoolDownTime = time.Now().Add(h.opts.CoolDown)
 			h.gcHeapTriggerCount++
 		} else {
 			// force dump next time
@@ -432,7 +432,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
 func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
-	c := h.GCHeapOpts
+	c := h.opts.GCHeapOpts
 	if !force && !matchRule(h.gcHeapStats, gc, c.GCHeapTriggerPercentMin, c.GCHeapTriggerPercentAbs, c.GCHeapTriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
@@ -443,42 +443,42 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 	}
 
 	var buf bytes.Buffer
-	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.DumpProfileType)) // nolint: errcheck
+	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, gcHeap, gc)
 
 	return true
 }
 
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, currentStat int) {
-	binFileName := getBinaryFileName(h.DumpPath, dumpType)
+	binFileName := getBinaryFileName(h.opts.DumpPath, dumpType)
 
 	switch dumpType {
 	case mem:
-		opts := h.MemOpts
+		opts := h.opts.MemOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.MemTriggerPercentMin, opts.MemTriggerPercentDiff, opts.MemTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, currentStat)
 	case gcHeap:
-		opts := h.GCHeapOpts
+		opts := h.opts.GCHeapOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.GCHeapTriggerPercentMin, opts.GCHeapTriggerPercentDiff, opts.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, currentStat)
 	case goroutine:
-		opts := h.GrOpts
+		opts := h.opts.GrOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.GoroutineTriggerNumMin, opts.GoroutineTriggerPercentDiff, opts.GoroutineTriggerNumAbs, opts.GoroutineTriggerNumMax,
 			h.grNumStats.data, currentStat)
 	case thread:
-		opts := h.ThreadOpts
+		opts := h.opts.ThreadOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, currentStat)
 	}
 
-	if h.DumpProfileType == textDump {
+	if h.opts.DumpProfileType == textDump {
 		// write to log
 		var res = data.String()
-		if !h.DumpFullStack {
+		if !h.opts.DumpFullStack {
 			res = trimResult(data)
 		}
 		h.logf(res)
@@ -498,7 +498,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 
 func (h *Holmes) initEnvironment() {
 	// choose whether the max memory is limited by cgroup
-	if h.UseCGroup {
+	if h.opts.UseCGroup {
 		// use cgroup
 		getUsage = getUsageCGroup
 		h.logf("[Holmes] use cgroup to limit memory")
@@ -508,16 +508,16 @@ func (h *Holmes) initEnvironment() {
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
 
-	logger := h.Logger.Load()
+	logger := h.opts.Logger.Load()
 
-	if (logger == nil || logger == os.Stdout) && h.logOpts.RotateEnable {
-		h.logOpts.RotateEnable = false
+	if (logger == nil || logger == os.Stdout) && h.opts.logOpts.RotateEnable {
+		h.opts.logOpts.RotateEnable = false
 	}
 }
 
 func (h *Holmes) EnableDump(curCPU int) (err error) {
-	if h.CPUMaxPercent != 0 && curCPU >= h.CPUMaxPercent {
-		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.CPUMaxPercent)
+	if h.opts.CPUMaxPercent != 0 && curCPU >= h.opts.CPUMaxPercent {
+		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.opts.CPUMaxPercent)
 	}
 	return nil
 }
