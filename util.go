@@ -209,7 +209,7 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
 
-func writeProfileDataToFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, logf logFncTyp) {
+func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, logf logFncTyp) {
 	if dumpOpts.DumpProfileType == textDump {
 		// write to log
 		var res = data.String()

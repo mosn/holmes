@@ -277,7 +277,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	}
 }
 
-func (h *Holmes) memProfile(rss int, c *memOptions) bool {
+func (h *Holmes) memProfile(rss int, c *typeOption) bool {
 
 	if !matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -291,7 +291,7 @@ func (h *Holmes) memProfile(rss int, c *memOptions) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
-	h.writeMemProfileDataToFile(buf, c, mem, rss)
+	h.writeProfileDataToFile(buf, c, mem, rss, h.memStats)
 	return true
 }
 
@@ -320,7 +320,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	}
 }
 
-func (h *Holmes) threadProfile(curThreadNum int, c *threadOptions) bool {
+func (h *Holmes) threadProfile(curThreadNum int, c *typeOption) bool {
 
 	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -335,7 +335,7 @@ func (h *Holmes) threadProfile(curThreadNum int, c *threadOptions) bool {
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
 
-	h.writeThreadProfileDataToFile(buf, c, thread, curThreadNum)
+	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats)
 
 	return true
 }
@@ -368,7 +368,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 	}
 }
 
-func (h *Holmes) cpuProfile(curCPUUsage int, c *cpuOptions) bool {
+func (h *Holmes) cpuProfile(curCPUUsage int, c *typeOption) bool {
 
 	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -472,7 +472,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 // gcHeapProfile will dump profile twice when triggered once.
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
-func (h *Holmes) gcHeapProfile(gc int, force bool, c *gcHeapOptions) bool {
+func (h *Holmes) gcHeapProfile(gc int, force bool, c *typeOption) bool {
 	if !force && !matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
@@ -485,45 +485,25 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c *gcHeapOptions) bool {
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeGcHeapProfileDataToFile(buf, c, gcHeap, gc)
+	h.writeProfileDataToFile(buf, c, gcHeap, gc, h.gcHeapStats)
 
 	return true
 }
-
-func (h *Holmes) writeMemProfileDataToFile(data bytes.Buffer, opts *memOptions, dumpType configureType, currentStat int) {
-	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
-		NotSupportTypeMaxConfig,
-		h.memStats.data, currentStat)
-
-	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
-}
-
 func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts *grOptions, dumpType configureType, currentStat int) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
 		opts.GoroutineTriggerNumMax,
 		h.grNumStats.data, currentStat)
 
-	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
+	writeFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
-func (h *Holmes) writeThreadProfileDataToFile(data bytes.Buffer, opts *threadOptions, dumpType configureType, currentStat int) {
+func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts *typeOption, dumpType configureType, currentStat int, ringStats ring) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
-		NotSupportTypeMaxConfig,
-		h.threadStats.data, currentStat)
+		NotSupportTypeMaxConfig, ringStats, currentStat)
 
-	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
-}
-
-func (h *Holmes) writeGcHeapProfileDataToFile(data bytes.Buffer, opts *gcHeapOptions, dumpType configureType, currentStat int) {
-	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
-		NotSupportTypeMaxConfig,
-		h.gcHeapStats.data, currentStat)
-
-	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
+	writeFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
 func (h *Holmes) initEnvironment() {
