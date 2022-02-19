@@ -246,11 +246,16 @@ func (h *Holmes) goroutineProfile(gNum int) bool {
 
 // memory start.
 func (h *Holmes) memCheckAndDump(mem int) {
+	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
-	// todo the better way is get a copy instead of locking it
-	h.opts.MemOpts.L.RLock()
-	defer h.opts.MemOpts.L.RUnlock()
-	if !h.opts.MemOpts.Enable {
+
+	memOpts, exist := h.opts.GetMemOpts()
+	if !exist {
+		h.logf("memory option has not been initialized")
+		return
+	}
+
+	if !memOpts.Enable {
 		return
 	}
 
@@ -259,14 +264,14 @@ func (h *Holmes) memCheckAndDump(mem int) {
 		return
 	}
 
-	if triggered := h.memProfile(mem); triggered {
+	if triggered := h.memProfile(mem, &memOpts); triggered {
 		h.memCoolDownTime = time.Now().Add(coolDown)
 		h.memTriggerCount++
 	}
 }
 
-func (h *Holmes) memProfile(rss int) bool {
-	c := h.opts.MemOpts
+func (h *Holmes) memProfile(rss int, c *memOptions) bool {
+
 	if !matchRule(h.memStats, rss, c.TriggerPercentMin, c.TriggerPercentAbs, c.TriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
@@ -278,7 +283,8 @@ func (h *Holmes) memProfile(rss int) bool {
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, mem, rss)
+
+	h.writeMemProfileDataToFile(buf, c, mem, rss)
 	return true
 }
 
@@ -453,15 +459,22 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 	return true
 }
 
+func (h *Holmes) writeMemProfileDataToFile(data bytes.Buffer, opts *memOptions, dumpType configureType, currentStat int) {
+	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
+		h.memStats.data, currentStat)
+
+	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
+}
+
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, currentStat int) {
-	binFileName := getBinaryFileName(h.opts.DumpPath, dumpType)
 
 	switch dumpType {
-	case mem:
-		opts := h.opts.MemOpts
-		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
-			h.memStats.data, currentStat)
+	//case mem:
+	//	opts := h.opts.MemOpts
+	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+	//		opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
+	//		h.memStats.data, currentStat)
 	case gcHeap:
 		opts := h.opts.GCHeapOpts
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
@@ -478,26 +491,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 			opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, currentStat)
 	}
-
-	if h.opts.DumpProfileType == textDump {
-		// write to log
-		var res = data.String()
-		if !h.opts.DumpFullStack {
-			res = trimResult(data)
-		}
-		h.logf(res)
-	} else {
-		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
-		if err != nil {
-			h.logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
-			return
-		}
-		defer bf.Close()
-
-		if _, err = bf.Write(data.Bytes()); err != nil {
-			h.logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
-		}
-	}
+	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
 func (h *Holmes) initEnvironment() {

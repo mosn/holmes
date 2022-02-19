@@ -18,12 +18,7 @@ type options struct {
 	// overwrite the system level memory limitation when > 0.
 	memoryLimit uint64
 
-	// full path to put the profile files, default /tmp
-	DumpPath string
-	// default dump to binary profile, set to true if you want a text profile
-	DumpProfileType dumpProfileType
-	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
-	DumpFullStack bool
+	*DumpOptions
 
 	LogLevel int
 	Logger   atomic.Value
@@ -52,16 +47,26 @@ type options struct {
 	ThreadOpts *threadOptions
 }
 
-//// GetMemOpts return a copy of MemOpts
-//// if MemOpts not exist return a empty memOptions and false
-//func (o *options)GetMemOpts() (memOptions,bool){
-//	if o.MemOpts == nil{
-//		return memOptions{},false
-//	}
-//	o.MemOpts.L.RLock()
-//	o.MemOpts.L.RUnlock()
-//	return *o.MemOpts,true
-//}
+// DumpOptions contains configuration about dump file.
+type DumpOptions struct {
+	// full path to put the profile files, default /tmp
+	DumpPath string
+	// default dump to binary profile, set to true if you want a text profile
+	DumpProfileType dumpProfileType
+	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
+	DumpFullStack bool
+}
+
+// GetMemOpts return a copy of MemOpts
+// if MemOpts not exist return a empty memOptions and false
+func (o *options) GetMemOpts() (memOptions, bool) {
+	if o.MemOpts == nil {
+		return memOptions{}, false
+	}
+	o.MemOpts.L.RLock()
+	o.MemOpts.L.RUnlock()
+	return *o.MemOpts, true
+}
 
 func (o *options) SetCoolDown(new time.Duration) {
 	o.CoolDown = new
@@ -89,9 +94,11 @@ func newOptions() *options {
 		LogLevel:        LogLevelDebug,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
-		DumpPath:        defaultDumpPath,
-		DumpProfileType: defaultDumpProfileType,
-		DumpFullStack:   false,
+		DumpOptions: &DumpOptions{
+			DumpPath:        defaultDumpPath,
+			DumpProfileType: defaultDumpProfileType,
+			DumpFullStack:   false,
+		},
 	}
 	o.Logger.Store(os.Stdout)
 	return o

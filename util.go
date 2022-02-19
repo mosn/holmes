@@ -208,3 +208,26 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
+
+func writeProfileDataToFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, logf logFncTyp) {
+	if dumpOpts.DumpProfileType == textDump {
+		// write to log
+		var res = data.String()
+		if dumpOpts.DumpFullStack {
+			res = trimResult(data)
+		}
+		logf(res)
+	} else {
+		binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
+		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
+		if err != nil {
+			logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
+			return
+		}
+		defer bf.Close()
+
+		if _, err = bf.Write(data.Bytes()); err != nil {
+			logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
+		}
+	}
+}
