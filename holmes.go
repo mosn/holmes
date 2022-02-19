@@ -329,7 +329,16 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 
 // cpu start.
 func (h *Holmes) cpuCheckAndDump(cpu int) {
-	if !h.opts.CPUOpts.Enable {
+	// get a copy instead of locking it
+	coolDown := h.opts.CoolDown
+
+	cpuOpts, exist := h.opts.GetCPUOpts()
+	if !exist {
+		h.logf("cpu option has not been initialized")
+		return
+	}
+
+	if !cpuOpts.Enable {
 		return
 	}
 
@@ -338,18 +347,18 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 		return
 	}
 
-	if triggered := h.cpuProfile(cpu); triggered {
-		h.cpuCoolDownTime = time.Now().Add(h.opts.CoolDown)
+	if triggered := h.cpuProfile(cpu, &cpuOpts); triggered {
+		h.cpuCoolDownTime = time.Now().Add(coolDown)
 		h.cpuTriggerCount++
 	}
 }
 
-func (h *Holmes) cpuProfile(curCPUUsage int) bool {
-	c := h.opts.CPUOpts
-	if !matchRule(h.cpuStats, curCPUUsage, c.CPUTriggerPercentMin, c.CPUTriggerPercentAbs, c.CPUTriggerPercentDiff, NotSupportTypeMaxConfig) {
+func (h *Holmes) cpuProfile(curCPUUsage int, c *cpuOptions) bool {
+
+	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerPercentMin, c.TriggerPercentAbs, c.TriggerPercentDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
-			c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
@@ -374,7 +383,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int) bool {
 	pprof.StopCPUProfile()
 
 	h.logf(UniformLogFormat, "pprof dump to log dir", type2name[cpu],
-		c.CPUTriggerPercentMin, c.CPUTriggerPercentDiff, c.CPUTriggerPercentAbs, NotSupportTypeMaxConfig,
+		c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
 	return true

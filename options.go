@@ -68,6 +68,17 @@ func (o *options) GetMemOpts() (memOptions, bool) {
 	return *o.MemOpts, true
 }
 
+// GetCPUOpts return a copy of CPUOpts
+// if CPUOpts not exist return a empty cpuOptions and false
+func (o *options) GetCPUOpts() (cpuOptions, bool) {
+	if o.CPUOpts == nil {
+		return cpuOptions{}, false
+	}
+	o.CPUOpts.L.RLock()
+	o.CPUOpts.L.RUnlock()
+	return *o.CPUOpts, true
+}
+
 func (o *options) SetCoolDown(new time.Duration) {
 	o.CoolDown = new
 }
@@ -345,27 +356,20 @@ type cpuOptions struct {
 	// enable the cpu dumper, should dump if one of the following requirements is matched
 	//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
 	//   2. cpu usage > CPUTriggerAbs
-	Enable                bool
-	CPUTriggerPercentMin  int // cpu trigger min in percent
-	CPUTriggerPercentDiff int // cpu trigger diff in percent
-	CPUTriggerPercentAbs  int // cpu trigger abs in percent
+	*baseOptions
 }
 
 func newCPUOptions() *cpuOptions {
-	return &cpuOptions{
-		Enable:                false,
-		CPUTriggerPercentAbs:  defaultCPUTriggerAbs,
-		CPUTriggerPercentDiff: defaultCPUTriggerDiff,
-		CPUTriggerPercentMin:  defaultCPUTriggerMin,
-	}
+	base := newDefaultBaseOptions()
+	return &cpuOptions{base}
 }
 
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CPUOpts.CPUTriggerPercentMin = min
-		opts.CPUOpts.CPUTriggerPercentDiff = diff
-		opts.CPUOpts.CPUTriggerPercentAbs = abs
+		opts.CPUOpts.SetTriggerPercentMin(min)
+		opts.CPUOpts.SetTriggerPercentDiff(diff)
+		opts.CPUOpts.SetTriggerPercentAbs(abs)
 		return
 	})
 }
