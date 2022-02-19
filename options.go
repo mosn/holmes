@@ -44,7 +44,7 @@ type options struct {
 	memOpts    *memOptions
 	GCHeapOpts *gcHeapOptions
 	cpuOpts    *cpuOptions
-	ThreadOpts *threadOptions
+	threadOpts *threadOptions
 }
 
 // DumpOptions contains configuration about dump file.
@@ -91,6 +91,17 @@ func (o *options) GetGrOpts() (grOptions, bool) {
 	return *o.grOpts, true
 }
 
+// GetThreadOpts return a copy of memOpts
+// if threadOpts not exist return a empty threadOptions and false
+func (o *options) GetThreadOpts() (threadOptions, bool) {
+	if o.threadOpts == nil {
+		return threadOptions{}, false
+	}
+	o.threadOpts.L.RLock()
+	defer o.threadOpts.L.RUnlock()
+	return *o.threadOpts, true
+}
+
 func (o *options) SetCoolDown(new time.Duration) {
 	o.CoolDown = new
 }
@@ -113,7 +124,7 @@ func newOptions() *options {
 		memOpts:         newMemOptions(),
 		GCHeapOpts:      newGCHeapOptions(),
 		cpuOpts:         newCPUOptions(),
-		ThreadOpts:      newThreadOptions(),
+		threadOpts:      newThreadOptions(),
 		LogLevel:        LogLevelDebug,
 		CollectInterval: defaultInterval,
 		CoolDown:        defaultCooldown,
@@ -344,27 +355,26 @@ func WithMemoryLimit(limit uint64) Option {
 }
 
 type threadOptions struct {
-	Enable                   bool
-	ThreadTriggerPercentMin  int // thread trigger min in number
-	ThreadTriggerPercentDiff int // thread trigger diff in percent
-	ThreadTriggerPercentAbs  int // thread trigger abs in number
+	*baseOptions
 }
 
 func newThreadOptions() *threadOptions {
-	return &threadOptions{
-		Enable:                   false,
-		ThreadTriggerPercentAbs:  defaultThreadTriggerAbs,
-		ThreadTriggerPercentDiff: defaultThreadTriggerDiff,
-		ThreadTriggerPercentMin:  defaultThreadTriggerMin,
+	base := &baseOptions{
+		L:           sync.RWMutex{},
+		Enable:      false,
+		TriggerMin:  defaultMemTriggerMin,
+		TriggerAbs:  defaultMemTriggerAbs,
+		TriggerDiff: defaultMemTriggerDiff,
 	}
+	return &threadOptions{base}
 }
 
 // WithThreadDump set the thread dump options.
 func WithThreadDump(min, diff, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.ThreadOpts.ThreadTriggerPercentMin = min
-		opts.ThreadOpts.ThreadTriggerPercentDiff = diff
-		opts.ThreadOpts.ThreadTriggerPercentAbs = abs
+		opts.cpuOpts.SetTriggerMin(min)
+		opts.cpuOpts.SetTriggerDiff(diff)
+		opts.cpuOpts.SetTriggerAbs(abs)
 		return
 	})
 }

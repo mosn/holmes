@@ -65,13 +65,13 @@ func New(opts ...Option) (*Holmes, error) {
 
 // EnableThreadDump enables the goroutine dump.
 func (h *Holmes) EnableThreadDump() *Holmes {
-	h.opts.ThreadOpts.Enable = true
+	h.opts.threadOpts.SetEnable(true)
 	return h
 }
 
 // DisableThreadDump disables the goroutine dump.
 func (h *Holmes) DisableThreadDump() *Holmes {
-	h.opts.ThreadOpts.Enable = false
+	h.opts.threadOpts.SetEnable(false)
 	return h
 }
 
@@ -297,7 +297,15 @@ func (h *Holmes) memProfile(rss int, c *memOptions) bool {
 
 // thread start.
 func (h *Holmes) threadCheckAndDump(threadNum int) {
-	if !h.opts.ThreadOpts.Enable {
+	// get a copy instead of locking it
+	coolDown := h.opts.CoolDown
+
+	threadOpts, exist := h.opts.GetThreadOpts()
+	if !exist {
+		h.logf("thread option has not been initialized")
+		return
+	}
+	if !threadOpts.Enable {
 		return
 	}
 
@@ -306,18 +314,18 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 		return
 	}
 
-	if triggered := h.threadProfile(threadNum); triggered {
-		h.threadCoolDownTime = time.Now().Add(h.opts.CoolDown)
+	if triggered := h.threadProfile(threadNum, &threadOpts); triggered {
+		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
 	}
 }
 
-func (h *Holmes) threadProfile(curThreadNum int) bool {
-	c := h.opts.ThreadOpts
-	if !matchRule(h.threadStats, curThreadNum, c.ThreadTriggerPercentMin, c.ThreadTriggerPercentAbs, c.ThreadTriggerPercentDiff, NotSupportTypeMaxConfig) {
+func (h *Holmes) threadProfile(curThreadNum int, c *threadOptions) bool {
+
+	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
-			c.ThreadTriggerPercentMin, c.ThreadTriggerPercentDiff, c.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
 		return false
@@ -327,7 +335,7 @@ func (h *Holmes) threadProfile(curThreadNum int) bool {
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
 
-	h.writeProfileDataToFile(buf, thread, curThreadNum)
+	h.writeThreadProfileDataToFile(buf, c, thread, curThreadNum)
 
 	return true
 }
@@ -493,6 +501,15 @@ func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts *grOptions, du
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
+func (h *Holmes) writeThreadProfileDataToFile(data bytes.Buffer, opts *threadOptions, dumpType configureType, currentStat int) {
+	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
+		NotSupportTypeMaxConfig,
+		h.threadStats.data, currentStat)
+
+	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
+}
+
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, currentStat int) {
 
 	switch dumpType {
@@ -506,16 +523,16 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 			opts.GCHeapTriggerPercentMin, opts.GCHeapTriggerPercentDiff, opts.GCHeapTriggerPercentAbs, NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, currentStat)
-	//case goroutine:
-	//	opts := h.opts.grOpts
-	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-	//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, opts.GoroutineTriggerNumMax,
-	//		h.grNumStats.data, currentStat)
-	case thread:
-		opts := h.opts.ThreadOpts
-		h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-			opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
-			h.threadStats.data, currentStat)
+		//case goroutine:
+		//	opts := h.opts.grOpts
+		//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, opts.GoroutineTriggerNumMax,
+		//		h.grNumStats.data, currentStat)
+		//case thread:
+		//	opts := h.opts.threadOpts
+		//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
+		//		opts.ThreadTriggerPercentMin, opts.ThreadTriggerPercentDiff, opts.ThreadTriggerPercentAbs, NotSupportTypeMaxConfig,
+		//		h.threadStats.data, currentStat)
 	}
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
