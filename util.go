@@ -124,11 +124,11 @@ func getNormalMemoryLimit() (uint64, error) {
 }
 
 func getMemoryLimit(h *Holmes) (uint64, error) {
-	if h.opts.memoryLimit > 0 {
-		return h.opts.memoryLimit, nil
+	if h.memoryLimit > 0 {
+		return h.memoryLimit, nil
 	}
 
-	if h.opts.UseCGroup {
+	if h.UseCGroup {
 		return getCGroupMemoryLimit()
 	}
 	return getNormalMemoryLimit()

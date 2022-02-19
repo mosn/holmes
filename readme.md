@@ -387,3 +387,14 @@ goroutine profile: total 1002
 ```
 
 So we know that the threads are blocked by cgo calls.
+
+## Configuration Option set API
+
+Currently we only support using 'Set API' control some fields that used by `CheckAndDump` method
+(except for the `DumpProfileType`).
+
+For memory profile type, we support the following fields.
+```bazaar
+ MemOpts
+ memCoolDownTime
+```
