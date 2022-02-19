@@ -226,21 +226,16 @@ func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 }
 
 type baseOptions struct {
-	L                  *sync.RWMutex
-	Enable             bool
-	TriggerPercentMin  int // mem/cpu/gr/gcheap trigger minimum in percent
-	TriggerPercentDiff int // mem/cpu/gr/gcheap  trigger diff in percent
-	TriggerPercentAbs  int // mem/cpu/gr/gcheap  trigger absolute in percent
-}
+	L      *sync.RWMutex
+	Enable bool
+	// mem/cpu/gcheap trigger minimum in percent, goroutine/thread trigger minimum in number
+	TriggerMin int
 
-func newDefaultBaseOptions() *baseOptions {
-	return &baseOptions{
-		L:                  &sync.RWMutex{},
-		Enable:             false,
-		TriggerPercentAbs:  defaultMemTriggerAbs,
-		TriggerPercentDiff: defaultMemTriggerDiff,
-		TriggerPercentMin:  defaultMemTriggerMin,
-	}
+	// mem/cpu/gcheap trigger abs in percent, goroutine/thread trigger abs in number
+	TriggerAbs int
+
+	// mem/cpu/gcheap/goroutine/thread trigger diff in percent
+	TriggerDiff int
 }
 
 func (base *baseOptions) SetEnable(new bool) {
@@ -252,30 +247,36 @@ func (base *baseOptions) SetEnable(new bool) {
 func (base *baseOptions) SetTriggerPercentMin(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
-	base.TriggerPercentMin = new
+	base.TriggerMin = new
 }
 
 func (base *baseOptions) SetTriggerPercentDiff(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
-	base.TriggerPercentDiff = new
+	base.TriggerDiff = new
 }
 
 func (base *baseOptions) SetTriggerPercentAbs(new int) {
 	base.L.Lock()
 	defer base.L.Unlock()
-	base.TriggerPercentAbs = new
+	base.TriggerAbs = new
 }
 
 type memOptions struct {
 	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > TriggerPercentMin && memory usage diff > TriggerPercentDiff
-	//   2. memory usage > TriggerPercentAbs
+	// in percent
+	//   1. memory usage > TriggerMin && memory usage diff > TriggerDiff
+	//   2. memory usage > TriggerAbs
 	*baseOptions
 }
 
 func newMemOptions() *memOptions {
-	base := newDefaultBaseOptions()
+	base := &baseOptions{
+		Enable:      false,
+		TriggerMin:  defaultMemTriggerMin,
+		TriggerAbs:  defaultMemTriggerAbs,
+		TriggerDiff: defaultMemTriggerDiff,
+	}
 	return &memOptions{base}
 }
 
@@ -354,13 +355,19 @@ func WithThreadDump(min, diff, abs int) Option {
 
 type cpuOptions struct {
 	// enable the cpu dumper, should dump if one of the following requirements is matched
+	// in percent
 	//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
 	//   2. cpu usage > CPUTriggerAbs
 	*baseOptions
 }
 
 func newCPUOptions() *cpuOptions {
-	base := newDefaultBaseOptions()
+	base := &baseOptions{
+		Enable:      false,
+		TriggerMin:  defaultCPUTriggerMin,
+		TriggerAbs:  defaultCPUTriggerAbs,
+		TriggerDiff: defaultCPUTriggerDiff,
+	}
 	return &cpuOptions{base}
 }
 

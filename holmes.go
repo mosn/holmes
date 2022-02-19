@@ -272,10 +272,10 @@ func (h *Holmes) memCheckAndDump(mem int) {
 
 func (h *Holmes) memProfile(rss int, c *memOptions) bool {
 
-	if !matchRule(h.memStats, rss, c.TriggerPercentMin, c.TriggerPercentAbs, c.TriggerPercentDiff, NotSupportTypeMaxConfig) {
+	if !matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
-			c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
 		return false
@@ -355,10 +355,10 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 func (h *Holmes) cpuProfile(curCPUUsage int, c *cpuOptions) bool {
 
-	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerPercentMin, c.TriggerPercentAbs, c.TriggerPercentDiff, NotSupportTypeMaxConfig) {
+	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
-			c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
+			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
@@ -383,7 +383,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c *cpuOptions) bool {
 	pprof.StopCPUProfile()
 
 	h.logf(UniformLogFormat, "pprof dump to log dir", type2name[cpu],
-		c.TriggerPercentMin, c.TriggerPercentDiff, c.TriggerPercentAbs, NotSupportTypeMaxConfig,
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
 	return true
@@ -470,7 +470,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool) bool {
 
 func (h *Holmes) writeMemProfileDataToFile(data bytes.Buffer, opts *memOptions, dumpType configureType, currentStat int) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
+		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, NotSupportTypeMaxConfig,
 		h.memStats.data, currentStat)
 
 	writeProfileDataToFile(data, dumpType, h.opts.DumpOptions, h.logf)
@@ -482,7 +482,7 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 	//case mem:
 	//	opts := h.opts.memOpts
 	//	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-	//		opts.TriggerPercentMin, opts.TriggerPercentDiff, opts.TriggerPercentAbs, NotSupportTypeMaxConfig,
+	//		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs, NotSupportTypeMaxConfig,
 	//		h.memStats.data, currentStat)
 	case gcHeap:
 		opts := h.opts.GCHeapOpts
