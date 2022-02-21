@@ -61,57 +61,62 @@ type DumpOptions struct {
 // GetMemOpts return a copy of memOpts
 // if memOpts not exist return a empty memOptions and false
 // memOptions which be returned
-func (o *options) GetMemOpts() (typeOption, bool) {
-	if o.memOpts == nil {
-		return typeOption{}, false
-	}
+func (o *options) GetMemOpts() typeOption {
 	o.memOpts.L.RLock()
 	defer o.memOpts.L.RUnlock()
-	return *o.memOpts, true
+
+	if o.memOpts == nil {
+		return typeOption{}
+	}
+	return *o.memOpts
 }
 
 // GetCPUOpts return a copy of cpuOpts
 // if cpuOpts not exist return a empty typeOption and false
-func (o *options) GetCPUOpts() (typeOption, bool) {
-	if o.cpuOpts == nil {
-		return typeOption{}, false
-	}
+func (o *options) GetCPUOpts() typeOption {
 	o.cpuOpts.L.RLock()
 	defer o.cpuOpts.L.RUnlock()
-	return *o.cpuOpts, true
+
+	if o.cpuOpts == nil {
+		return typeOption{}
+	}
+	return *o.cpuOpts
 }
 
 // GetGrOpts return a copy of memOpts
 // if grOpts not exist return a empty grOptions and false
-func (o *options) GetGrOpts() (grOptions, bool) {
-	if o.grOpts == nil {
-		return grOptions{}, false
-	}
+func (o *options) GetGrOpts() grOptions {
 	o.grOpts.L.RLock()
 	defer o.grOpts.L.RUnlock()
-	return *o.grOpts, true
+
+	if o.grOpts == nil {
+		return grOptions{}
+	}
+	return *o.grOpts
 }
 
 // GetThreadOpts return a copy of memOpts
 // if threadOpts not exist return a empty typeOption and false
-func (o *options) GetThreadOpts() (typeOption, bool) {
-	if o.threadOpts == nil {
-		return typeOption{}, false
-	}
+func (o *options) GetThreadOpts() typeOption {
 	o.threadOpts.L.RLock()
 	defer o.threadOpts.L.RUnlock()
-	return *o.threadOpts, true
+
+	if o.threadOpts == nil {
+		return typeOption{}
+	}
+	return *o.threadOpts
 }
 
 // GetGcHeapOpts return a copy of memOpts
 // if gCHeapOpts not exist return a empty typeOption and false
-func (o *options) GetGcHeapOpts() (typeOption, bool) {
-	if o.gCHeapOpts == nil {
-		return typeOption{}, false
-	}
+func (o *options) GetGcHeapOpts() typeOption {
 	o.gCHeapOpts.L.RLock()
 	defer o.gCHeapOpts.L.RUnlock()
-	return *o.gCHeapOpts, true
+
+	if o.gCHeapOpts == nil {
+		return typeOption{}
+	}
+	return *o.gCHeapOpts
 }
 
 func (o *options) SetCoolDown(new time.Duration) {

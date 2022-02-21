@@ -215,12 +215,8 @@ func (h *Holmes) startDumpLoop() {
 func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
+	grOpts := h.opts.GetGrOpts()
 
-	grOpts, exist := h.opts.GetGrOpts()
-	if !exist {
-		h.logf("goroutine option has not been initialized")
-		return
-	}
 	if !grOpts.Enable {
 		return
 	}
@@ -230,13 +226,13 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 
-	if triggered := h.goroutineProfile(gNum, &grOpts); triggered {
+	if triggered := h.goroutineProfile(gNum, grOpts); triggered {
 		h.grCoolDownTime = time.Now().Add(coolDown)
 		h.grTriggerCount++
 	}
 }
 
-func (h *Holmes) goroutineProfile(gNum int, c *grOptions) bool {
+func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 
 	if !matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax) {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
@@ -255,12 +251,7 @@ func (h *Holmes) goroutineProfile(gNum int, c *grOptions) bool {
 func (h *Holmes) memCheckAndDump(mem int) {
 	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
-
-	memOpts, exist := h.opts.GetMemOpts()
-	if !exist {
-		h.logf("memory option has not been initialized")
-		return
-	}
+	memOpts := h.opts.GetMemOpts()
 
 	if !memOpts.Enable {
 		return
@@ -271,13 +262,13 @@ func (h *Holmes) memCheckAndDump(mem int) {
 		return
 	}
 
-	if triggered := h.memProfile(mem, &memOpts); triggered {
+	if triggered := h.memProfile(mem, memOpts); triggered {
 		h.memCoolDownTime = time.Now().Add(coolDown)
 		h.memTriggerCount++
 	}
 }
 
-func (h *Holmes) memProfile(rss int, c *typeOption) bool {
+func (h *Holmes) memProfile(rss int, c typeOption) bool {
 
 	if !matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -300,11 +291,8 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
 
-	threadOpts, exist := h.opts.GetThreadOpts()
-	if !exist {
-		h.logf("thread option has not been initialized")
-		return
-	}
+	threadOpts := h.opts.GetThreadOpts()
+
 	if !threadOpts.Enable {
 		return
 	}
@@ -314,13 +302,13 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 		return
 	}
 
-	if triggered := h.threadProfile(threadNum, &threadOpts); triggered {
+	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
 	}
 }
 
-func (h *Holmes) threadProfile(curThreadNum int, c *typeOption) bool {
+func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 
 	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -347,11 +335,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
 
-	cpuOpts, exist := h.opts.GetCPUOpts()
-	if !exist {
-		h.logf("cpu option has not been initialized")
-		return
-	}
+	cpuOpts := h.opts.GetCPUOpts()
 
 	if !cpuOpts.Enable {
 		return
@@ -362,13 +346,13 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 		return
 	}
 
-	if triggered := h.cpuProfile(cpu, &cpuOpts); triggered {
+	if triggered := h.cpuProfile(cpu, cpuOpts); triggered {
 		h.cpuCoolDownTime = time.Now().Add(coolDown)
 		h.cpuTriggerCount++
 	}
 }
 
-func (h *Holmes) cpuProfile(curCPUUsage int, c *typeOption) bool {
+func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 
 	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
@@ -417,11 +401,8 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	// get a copy instead of locking it
 	coolDown := h.opts.CoolDown
 
-	gcHeapOpts, exist := h.opts.GetGcHeapOpts()
-	if !exist {
-		h.logf("gcHeap option has not been initialized")
-		return
-	}
+	gcHeapOpts := h.opts.GetGcHeapOpts()
+
 	if !gcHeapOpts.Enable {
 		return
 	}
@@ -456,7 +437,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 		return
 	}
 
-	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered, &gcHeapOpts); triggered {
+	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered, gcHeapOpts); triggered {
 		if h.gcHeapTriggered {
 			// already dump twice, mark it false
 			h.gcHeapTriggered = false
@@ -472,7 +453,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 // gcHeapProfile will dump profile twice when triggered once.
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
-func (h *Holmes) gcHeapProfile(gc int, force bool, c *typeOption) bool {
+func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 	if !force && !matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
@@ -489,7 +470,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c *typeOption) bool {
 
 	return true
 }
-func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts *grOptions, dumpType configureType, currentStat int) {
+func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts grOptions, dumpType configureType, currentStat int) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
 		opts.GoroutineTriggerNumMax,
@@ -498,7 +479,7 @@ func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts *grOptions, du
 	writeFile(data, dumpType, h.opts.DumpOptions, h.logf)
 }
 
-func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts *typeOption, dumpType configureType, currentStat int, ringStats ring) {
+func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dumpType configureType, currentStat int, ringStats ring) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
 		NotSupportTypeMaxConfig, ringStats, currentStat)
