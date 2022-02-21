@@ -39,6 +39,10 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
+	// if write lock is held mean holmes's
+	// configuration is being modified.
+	L *sync.RWMutex
+
 	logOpts *loggerOptions
 	grOpts  *grOptions
 
@@ -59,68 +63,42 @@ type DumpOptions struct {
 }
 
 // GetMemOpts return a copy of memOpts
-// if memOpts not exist return a empty memOptions and false
-// memOptions which be returned
 func (o *options) GetMemOpts() typeOption {
-	o.memOpts.L.RLock()
-	defer o.memOpts.L.RUnlock()
-
-	if o.memOpts == nil {
-		return typeOption{}
-	}
+	o.L.Lock()
+	defer o.L.Unlock()
 	return *o.memOpts
 }
 
 // GetCPUOpts return a copy of cpuOpts
 // if cpuOpts not exist return a empty typeOption and false
 func (o *options) GetCPUOpts() typeOption {
-	o.cpuOpts.L.RLock()
-	defer o.cpuOpts.L.RUnlock()
-
-	if o.cpuOpts == nil {
-		return typeOption{}
-	}
+	o.L.Lock()
+	defer o.L.Unlock()
 	return *o.cpuOpts
 }
 
 // GetGrOpts return a copy of memOpts
 // if grOpts not exist return a empty grOptions and false
 func (o *options) GetGrOpts() grOptions {
-	o.grOpts.L.RLock()
-	defer o.grOpts.L.RUnlock()
-
-	if o.grOpts == nil {
-		return grOptions{}
-	}
+	o.L.Lock()
+	defer o.L.Unlock()
 	return *o.grOpts
 }
 
 // GetThreadOpts return a copy of memOpts
 // if threadOpts not exist return a empty typeOption and false
 func (o *options) GetThreadOpts() typeOption {
-	o.threadOpts.L.RLock()
-	defer o.threadOpts.L.RUnlock()
-
-	if o.threadOpts == nil {
-		return typeOption{}
-	}
+	o.L.Lock()
+	defer o.L.Unlock()
 	return *o.threadOpts
 }
 
 // GetGcHeapOpts return a copy of memOpts
 // if gCHeapOpts not exist return a empty typeOption and false
 func (o *options) GetGcHeapOpts() typeOption {
-	o.gCHeapOpts.L.RLock()
-	defer o.gCHeapOpts.L.RUnlock()
-
-	if o.gCHeapOpts == nil {
-		return typeOption{}
-	}
+	o.L.Lock()
+	defer o.L.Unlock()
 	return *o.gCHeapOpts
-}
-
-func (o *options) SetCoolDown(new time.Duration) {
-	o.CoolDown = new
 }
 
 // Option holmes option type.
@@ -168,11 +146,7 @@ func WithCollectInterval(interval string) Option {
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCoolDown(coolDown string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		cd, err := time.ParseDuration(coolDown)
-		if err != nil {
-			return err
-		}
-		opts.SetCoolDown(cd)
+		opts.CoolDown, err = time.ParseDuration(coolDown)
 		return
 	})
 }
@@ -242,10 +216,6 @@ type grOptions struct {
 	GoroutineTriggerNumMax int // goroutine trigger max in number
 }
 
-func (g *grOptions) SetTriggerNumMax(new int) {
-	g.GoroutineTriggerNumMax = new
-}
-
 func newGrOptions() *grOptions {
 	base := newTypeOpts(
 		false,
@@ -258,16 +228,13 @@ func newGrOptions() *grOptions {
 // WithGoroutineDump set the goroutine dump options.
 func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.grOpts.SetTriggerMin(min)
-		opts.grOpts.SetTriggerDiff(diff)
-		opts.grOpts.SetTriggerAbs(abs)
-		opts.grOpts.SetTriggerNumMax(max)
+		opts.grOpts.SetTrigger(min, abs, diff)
+		opts.grOpts.GoroutineTriggerNumMax = max
 		return
 	})
 }
 
 type typeOption struct {
-	L      sync.RWMutex
 	Enable bool
 	// mem/cpu/gcheap trigger minimum in percent, goroutine/thread trigger minimum in number
 	TriggerMin int
@@ -281,36 +248,14 @@ type typeOption struct {
 
 func newTypeOpts(enable bool, triggerMin, triggerAbs, triggerDiff int) *typeOption {
 	return &typeOption{
-		L:           sync.RWMutex{},
 		Enable:      enable,
 		TriggerMin:  triggerMin,
 		TriggerAbs:  triggerAbs,
 		TriggerDiff: triggerDiff,
 	}
 }
-
-func (base *typeOption) SetEnable(new bool) {
-	base.L.Lock()
-	defer base.L.Unlock()
-	base.Enable = new
-}
-
-func (base *typeOption) SetTriggerMin(new int) {
-	base.L.Lock()
-	defer base.L.Unlock()
-	base.TriggerMin = new
-}
-
-func (base *typeOption) SetTriggerDiff(new int) {
-	base.L.Lock()
-	defer base.L.Unlock()
-	base.TriggerDiff = new
-}
-
-func (base *typeOption) SetTriggerAbs(new int) {
-	base.L.Lock()
-	defer base.L.Unlock()
-	base.TriggerAbs = new
+func (base *typeOption) SetTrigger(min, abs, diff int) {
+	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
 }
 
 // newMemOptions
@@ -329,9 +274,7 @@ func newMemOptions() *typeOption {
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.memOpts.SetTriggerMin(min)
-		opts.memOpts.SetTriggerDiff(diff)
-		opts.memOpts.SetTriggerAbs(abs)
+		opts.memOpts.SetTrigger(min, abs, diff)
 		return
 	})
 }
@@ -352,9 +295,7 @@ func newGCHeapOptions() *typeOption {
 // WithGCHeapDump set the GC heap dump options.
 func WithGCHeapDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.gCHeapOpts.SetTriggerMin(min)
-		opts.gCHeapOpts.SetTriggerDiff(diff)
-		opts.gCHeapOpts.SetTriggerAbs(abs)
+		opts.gCHeapOpts.SetTrigger(min, abs, diff)
 		return
 	})
 }
@@ -378,9 +319,7 @@ func newThreadOptions() *typeOption {
 // WithThreadDump set the thread dump options.
 func WithThreadDump(min, diff, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.SetTriggerMin(min)
-		opts.cpuOpts.SetTriggerDiff(diff)
-		opts.cpuOpts.SetTriggerAbs(abs)
+		opts.threadOpts.SetTrigger(min, abs, diff)
 		return
 	})
 }
@@ -402,9 +341,7 @@ func newCPUOptions() *typeOption {
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.SetTriggerMin(min)
-		opts.cpuOpts.SetTriggerDiff(diff)
-		opts.cpuOpts.SetTriggerAbs(abs)
+		opts.cpuOpts.SetTrigger(min, abs, diff)
 		return
 	})
 }

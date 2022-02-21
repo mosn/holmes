@@ -65,55 +65,55 @@ func New(opts ...Option) (*Holmes, error) {
 
 // EnableThreadDump enables the goroutine dump.
 func (h *Holmes) EnableThreadDump() *Holmes {
-	h.opts.threadOpts.SetEnable(true)
+	h.opts.threadOpts.Enable = true
 	return h
 }
 
 // DisableThreadDump disables the goroutine dump.
 func (h *Holmes) DisableThreadDump() *Holmes {
-	h.opts.threadOpts.SetEnable(false)
+	h.opts.threadOpts.Enable = false
 	return h
 }
 
 // EnableGoroutineDump enables the goroutine dump.
 func (h *Holmes) EnableGoroutineDump() *Holmes {
-	h.opts.grOpts.SetEnable(true)
+	h.opts.grOpts.Enable = true
 	return h
 }
 
 // DisableGoroutineDump disables the goroutine dump.
 func (h *Holmes) DisableGoroutineDump() *Holmes {
-	h.opts.grOpts.SetEnable(false)
+	h.opts.grOpts.Enable = false
 	return h
 }
 
 // EnableCPUDump enables the CPU dump.
 func (h *Holmes) EnableCPUDump() *Holmes {
-	h.opts.cpuOpts.SetEnable(true)
+	h.opts.cpuOpts.Enable = true
 	return h
 }
 
 // DisableCPUDump disables the CPU dump.
 func (h *Holmes) DisableCPUDump() *Holmes {
-	h.opts.cpuOpts.SetEnable(false)
+	h.opts.cpuOpts.Enable = false
 	return h
 }
 
 // EnableMemDump enables the mem dump.
 func (h *Holmes) EnableMemDump() *Holmes {
-	h.opts.memOpts.SetEnable(true)
+	h.opts.memOpts.Enable = true
 	return h
 }
 
 // EnableGCHeapDump enables the GC heap dump.
 func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.gCHeapOpts.SetEnable(true)
+	h.opts.gCHeapOpts.Enable = true
 	return h
 }
 
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
-	h.opts.gCHeapOpts.SetEnable(false)
+	h.opts.gCHeapOpts.Enable = false
 	return h
 }
 
@@ -509,6 +509,17 @@ func (h *Holmes) initEnvironment() {
 func (h *Holmes) EnableDump(curCPU int) (err error) {
 	if h.opts.CPUMaxPercent != 0 && curCPU >= h.opts.CPUMaxPercent {
 		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.opts.CPUMaxPercent)
+	}
+	return nil
+}
+
+func (h *Holmes) Set(opts ...Option) error {
+	h.opts.L.Lock()
+	defer h.opts.L.Unlock()
+	for _, opt := range opts {
+		if err := opt.apply(h.opts); err != nil {
+			return err
+		}
 	}
 	return nil
 }
