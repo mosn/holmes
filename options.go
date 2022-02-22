@@ -64,7 +64,7 @@ type DumpOptions struct {
 	DumpFullStack bool
 }
 
-// GetMemOpts return a copy of memOpts
+// GetMemOpts return a copy of memOpts.
 func (o *options) GetMemOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
@@ -72,7 +72,7 @@ func (o *options) GetMemOpts() typeOption {
 }
 
 // GetCPUOpts return a copy of cpuOpts
-// if cpuOpts not exist return a empty typeOption and false
+// if cpuOpts not exist return a empty typeOption and false.
 func (o *options) GetCPUOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
@@ -80,7 +80,7 @@ func (o *options) GetCPUOpts() typeOption {
 }
 
 // GetGrOpts return a copy of memOpts
-// if grOpts not exist return a empty grOptions and false
+// if grOpts not exist return a empty grOptions and false.
 func (o *options) GetGrOpts() grOptions {
 	o.L.RLock()
 	defer o.L.RUnlock()
@@ -88,7 +88,7 @@ func (o *options) GetGrOpts() grOptions {
 }
 
 // GetThreadOpts return a copy of memOpts
-// if threadOpts not exist return a empty typeOption and false
+// if threadOpts not exist return a empty typeOption and false.
 func (o *options) GetThreadOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
@@ -96,7 +96,7 @@ func (o *options) GetThreadOpts() typeOption {
 }
 
 // GetGcHeapOpts return a copy of memOpts
-// if gCHeapOpts not exist return a empty typeOption and false
+// if gCHeapOpts not exist return a empty typeOption and false.
 func (o *options) GetGcHeapOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()

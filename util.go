@@ -214,7 +214,7 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 	if err != nil {
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
 	}
-	defer bf.Close()
+	defer bf.Close() // //nolint:errcheck
 
 	if _, err = bf.Write(data.Bytes()); err != nil {
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
