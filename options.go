@@ -21,7 +21,8 @@ type options struct {
 	*DumpOptions
 
 	LogLevel int
-	Logger   atomic.Value
+	// Logger *os.File
+	Logger atomic.Value
 
 	// interval for dump loop, default 5s
 	CollectInterval   time.Duration
