@@ -174,40 +174,53 @@ func (h *Holmes) startDumpLoop() {
 	// dump loop
 	ticker := time.NewTicker(h.opts.CollectInterval)
 	defer ticker.Stop()
-	for range ticker.C {
-		if atomic.LoadInt64(&h.stopped) == 1 {
-			fmt.Println("[Holmes] dump loop stopped")
-			return
+	for {
+		select {
+		case <-h.opts.intervalResetting:
+			// wait for go version update to 1.15
+			// can use Reset API directly here. pkg.go.dev/time#Ticker.Reset
+			// we can't use the `for-range` here, because the range loop
+			// caches the variable to be lopped and then it can't be overwritten
+			itv := h.opts.CollectInterval
+			fmt.Printf("[Holmes] collect interval is being resetting as [%v]\n", itv)
+			ticker = time.NewTicker(itv)
+
+		case <-ticker.C:
+			if atomic.LoadInt64(&h.stopped) == 1 {
+				fmt.Println("[Holmes] dump loop stopped")
+				return
+			}
+
+			cpu, mem, gNum, tNum, err := collect()
+			if err != nil {
+				h.logf(err.Error())
+				continue
+			}
+
+			h.cpuStats.push(cpu)
+			h.memStats.push(mem)
+			h.grNumStats.push(gNum)
+			h.threadStats.push(tNum)
+
+			h.collectCount++
+			if h.collectCount < minCollectCyclesBeforeDumpStart {
+				// at least collect some cycles
+				// before start to judge and dump
+				h.logf("[Holmes] warming up cycle : %d", h.collectCount)
+				continue
+			}
+
+			if err := h.EnableDump(cpu); err != nil {
+				h.logf("[Holmes] unable to dump: %v", err)
+				continue
+			}
+
+			h.goroutineCheckAndDump(gNum)
+			h.memCheckAndDump(mem)
+			h.cpuCheckAndDump(cpu)
+			h.threadCheckAndDump(tNum)
+
 		}
-
-		cpu, mem, gNum, tNum, err := collect()
-		if err != nil {
-			h.logf(err.Error())
-			continue
-		}
-
-		h.cpuStats.push(cpu)
-		h.memStats.push(mem)
-		h.grNumStats.push(gNum)
-		h.threadStats.push(tNum)
-
-		h.collectCount++
-		if h.collectCount < minCollectCyclesBeforeDumpStart {
-			// at least collect some cycles
-			// before start to judge and dump
-			h.logf("[Holmes] warming up cycle : %d", h.collectCount)
-			continue
-		}
-
-		if err := h.EnableDump(cpu); err != nil {
-			h.logf("[Holmes] unable to dump: %v", err)
-			continue
-		}
-
-		h.goroutineCheckAndDump(gNum)
-		h.memCheckAndDump(mem)
-		h.cpuCheckAndDump(cpu)
-		h.threadCheckAndDump(tNum)
 	}
 }
 
@@ -526,4 +539,10 @@ func (h *Holmes) Set(opts ...Option) error {
 		}
 	}
 	return nil
+}
+
+func (h *Holmes) GetOpts() options {
+	h.opts.L.Lock()
+	defer h.opts.L.Unlock()
+	return *h.opts
 }

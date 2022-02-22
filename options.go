@@ -24,7 +24,8 @@ type options struct {
 	Logger   atomic.Value
 
 	// interval for dump loop, default 5s
-	CollectInterval time.Duration
+	CollectInterval   time.Duration
+	intervalResetting chan struct{}
 
 	// the cooldown time after every type of dump
 	// interval for cooldown，default 1m
@@ -114,15 +115,16 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	o := &options{
-		logOpts:         newLoggerOptions(),
-		grOpts:          newGrOptions(),
-		memOpts:         newMemOptions(),
-		gCHeapOpts:      newGCHeapOptions(),
-		cpuOpts:         newCPUOptions(),
-		threadOpts:      newThreadOptions(),
-		LogLevel:        LogLevelDebug,
-		CollectInterval: defaultInterval,
-		CoolDown:        defaultCooldown,
+		logOpts:           newLoggerOptions(),
+		grOpts:            newGrOptions(),
+		memOpts:           newMemOptions(),
+		gCHeapOpts:        newGCHeapOptions(),
+		cpuOpts:           newCPUOptions(),
+		threadOpts:        newThreadOptions(),
+		LogLevel:          LogLevelDebug,
+		CollectInterval:   defaultInterval,
+		intervalResetting: make(chan struct{}, 1),
+		CoolDown:          defaultCooldown,
 		DumpOptions: &DumpOptions{
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
@@ -138,7 +140,15 @@ func newOptions() *options {
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCollectInterval(interval string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CollectInterval, err = time.ParseDuration(interval)
+		// CollectInterval wouldn't be zero value, because it
+		// will be initialized as defaultInterval at newOptions()
+		newInterval, err := time.ParseDuration(interval)
+		if err != nil || opts.CollectInterval.Seconds() == newInterval.Seconds() {
+			return
+		}
+
+		opts.intervalResetting <- struct{}{}
+		opts.CollectInterval = newInterval
 		return
 	})
 }
