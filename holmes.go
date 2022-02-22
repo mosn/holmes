@@ -476,7 +476,9 @@ func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts grOptions, dum
 		opts.GoroutineTriggerNumMax,
 		h.grNumStats.data, currentStat)
 
-	writeFile(data, dumpType, h.opts.DumpOptions, h.logf)
+	if err := writeFile(data, dumpType, h.opts.DumpOptions); err != nil {
+		h.logf("%s", err.Error())
+	}
 }
 
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dumpType configureType, currentStat int, ringStats ring) {
@@ -484,7 +486,9 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dump
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
 		NotSupportTypeMaxConfig, ringStats, currentStat)
 
-	writeFile(data, dumpType, h.opts.DumpOptions, h.logf)
+	if err := writeFile(data, dumpType, h.opts.DumpOptions); err != nil {
+		h.logf("%s", err.Error())
+	}
 }
 
 func (h *Holmes) initEnvironment() {

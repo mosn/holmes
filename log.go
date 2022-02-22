@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-type logFncTyp func(pattern string, args ...interface{})
-
 // log write content to log file.
 func (h *Holmes) logf(pattern string, args ...interface{}) {
 	if h.opts.LogLevel >= LogLevelInfo {

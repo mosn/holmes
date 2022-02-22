@@ -2,6 +2,7 @@ package holmes
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -209,25 +210,25 @@ func getBinaryFileName(filePath string, dumpType configureType) string {
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }
 
-func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, logf logFncTyp) {
+func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions) error {
 	if dumpOpts.DumpProfileType == textDump {
 		// write to log
-		var res = data.String()
 		if dumpOpts.DumpFullStack {
-			res = trimResult(data)
-		}
-		logf(res)
-	} else {
-		binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
-		bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
-		if err != nil {
-			logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
-			return
-		}
-		defer bf.Close()
-
-		if _, err = bf.Write(data.Bytes()); err != nil {
-			logf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
+			return fmt.Errorf(trimResult(data))
+		} else {
+			return fmt.Errorf(data.String())
 		}
 	}
+
+	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
+	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
+	if err != nil {
+		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
+	}
+	defer bf.Close()
+
+	if _, err = bf.Write(data.Bytes()); err != nil {
+		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
+	}
+	return nil
 }
