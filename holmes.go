@@ -225,7 +225,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		h.logf("[Holmes] goroutine dump is in cooldown")
 		return
 	}
-
+	// grOpts is a struct, no escape.
 	if triggered := h.goroutineProfile(gNum, grOpts); triggered {
 		h.grCoolDownTime = time.Now().Add(coolDown)
 		h.grTriggerCount++
@@ -261,7 +261,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 		h.logf("[Holmes] mem dump is in cooldown")
 		return
 	}
-
+	// memOpts is a struct, no escape.
 	if triggered := h.memProfile(mem, memOpts); triggered {
 		h.memCoolDownTime = time.Now().Add(coolDown)
 		h.memTriggerCount++
@@ -301,7 +301,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 		h.logf("[Holmes] thread dump is in cooldown")
 		return
 	}
-
+	// threadOpts is a struct, no escape.
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
@@ -345,7 +345,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 		h.logf("[Holmes] cpu dump is in cooldown")
 		return
 	}
-
+	// cpuOpts is a struct, no escape.
 	if triggered := h.cpuProfile(cpu, cpuOpts); triggered {
 		h.cpuCoolDownTime = time.Now().Add(coolDown)
 		h.cpuTriggerCount++

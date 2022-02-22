@@ -64,40 +64,40 @@ type DumpOptions struct {
 
 // GetMemOpts return a copy of memOpts
 func (o *options) GetMemOpts() typeOption {
-	o.L.Lock()
-	defer o.L.Unlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.memOpts
 }
 
 // GetCPUOpts return a copy of cpuOpts
 // if cpuOpts not exist return a empty typeOption and false
 func (o *options) GetCPUOpts() typeOption {
-	o.L.Lock()
-	defer o.L.Unlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.cpuOpts
 }
 
 // GetGrOpts return a copy of memOpts
 // if grOpts not exist return a empty grOptions and false
 func (o *options) GetGrOpts() grOptions {
-	o.L.Lock()
-	defer o.L.Unlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.grOpts
 }
 
 // GetThreadOpts return a copy of memOpts
 // if threadOpts not exist return a empty typeOption and false
 func (o *options) GetThreadOpts() typeOption {
-	o.L.Lock()
-	defer o.L.Unlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.threadOpts
 }
 
 // GetGcHeapOpts return a copy of memOpts
 // if gCHeapOpts not exist return a empty typeOption and false
 func (o *options) GetGcHeapOpts() typeOption {
-	o.L.Lock()
-	defer o.L.Unlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.gCHeapOpts
 }
 
@@ -128,6 +128,7 @@ func newOptions() *options {
 			DumpProfileType: defaultDumpProfileType,
 			DumpFullStack:   false,
 		},
+		L: &sync.RWMutex{},
 	}
 	o.Logger.Store(os.Stdout)
 	return o
