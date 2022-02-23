@@ -204,7 +204,7 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 			res := trimResult(data)
 			return fmt.Errorf(res)
 		}
-		return fmt.Errorf(data.String())
+		return fmt.Errorf(data.String()) // nolint:goerr113
 	}
 
 	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
