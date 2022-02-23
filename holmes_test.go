@@ -55,7 +55,6 @@ func TestSetGrOpts(t *testing.T) {
 	min, diff, abs := 3, 10, 1
 	before := h.grCoolDownTime
 
-	time.Sleep(20 * time.Second)
 	err := h.Set(
 		WithGoroutineDump(min, diff, abs, 90))
 	if err != nil {
