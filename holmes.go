@@ -195,7 +195,7 @@ func (h *Holmes) startDumpLoop() {
 			// we can't use the `for-range` here, because the range loop
 			// caches the variable to be lopped and then it can't be overwritten
 			itv := h.opts.CollectInterval
-			fmt.Printf("[Holmes] collect interval is being resetting as [%v]\n", itv) //nolint:forbidigo
+			fmt.Printf("[Holmes] collect interval is resetting to [%v]\n", itv) //nolint:forbidigo
 			ticker = time.NewTicker(itv)
 
 		case <-ticker.C:
