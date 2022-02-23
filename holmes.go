@@ -126,7 +126,7 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
-	if !gc.h.opts.gCHeapOpts.Enable || atomic.LoadInt64(&gc.h.stopped) == 1 {
+	if atomic.LoadInt64(&gc.h.stopped) == 1 {
 		return
 	}
 
@@ -429,9 +429,10 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	gcHeapOpts := h.opts.GetGcHeapOpts()
 
-	if !gcHeapOpts.Enable {
+	if !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
 		return
 	}
+
 	memStats := new(runtime.MemStats)
 	runtime.ReadMemStats(memStats)
 
