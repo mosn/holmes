@@ -182,7 +182,7 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 		opts.DumpPath = filepath.Dir(f)
 		logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil && os.IsNotExist(err) {
-			if err = os.MkdirAll(opts.DumpPath, 0o755); err != nil {
+			if err = os.MkdirAll(opts.DumpPath, 0755); err != nil {
 				return
 			}
 			logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
@@ -274,8 +274,7 @@ func (base *typeOption) SetTrigger(min, abs, diff int) {
 // newMemOptions
 // enable the heap dumper, should dump if one of the following requirements is matched
 //   1. memory usage > TriggerMin && memory usage diff > TriggerDiff
-//   2. memory usage > TriggerAbs
-// newMemOptions
+//   2. memory usage > TriggerAbs.
 func newMemOptions() *typeOption {
 	return newTypeOpts(
 		false,
@@ -296,7 +295,7 @@ func WithMemDump(min int, diff int, abs int) Option {
 // enable the heap dumper, should dump if one of the following requirements is matched
 //   1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
 //   2. GC heap usage > TriggerAbs
-// in percent
+// in percent.
 func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
 		false,

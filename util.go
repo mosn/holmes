@@ -202,17 +202,16 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 		// write to log
 		if dumpOpts.DumpFullStack {
 			return fmt.Errorf(trimResult(data))
-		} else {
-			return fmt.Errorf(data.String())
 		}
+		return fmt.Errorf(data.String())
 	}
 
 	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
-	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
+	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) ////nolint:gosec
 	if err != nil {
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
 	}
-	defer bf.Close() // //nolint:errcheck
+	defer bf.Close() //nolint:errcheck,gosec
 
 	if _, err = bf.Write(data.Bytes()); err != nil {
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %v", type2name[dumpType], err.Error())
