@@ -208,6 +208,7 @@ func (h *Holmes) startDumpLoop() {
 			cpu, mem, gNum, tNum, err := collect()
 			if err != nil {
 				h.logf(err.Error())
+
 				continue
 			}
 
@@ -221,11 +222,13 @@ func (h *Holmes) startDumpLoop() {
 				// at least collect some cycles
 				// before start to judge and dump
 				h.logf("[Holmes] warming up cycle : %d", h.collectCount)
+
 				continue
 			}
 
 			if err := h.EnableDump(cpu); err != nil {
 				h.logf("[Holmes] unable to dump: %v", err)
+
 				continue
 			}
 
