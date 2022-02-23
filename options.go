@@ -230,7 +230,6 @@ type grOptions struct {
 
 func newGrOptions() *grOptions {
 	base := newTypeOpts(
-		false,
 		defaultGoroutineTriggerMin,
 		defaultGoroutineTriggerAbs,
 		defaultGoroutineTriggerDiff)
@@ -240,7 +239,7 @@ func newGrOptions() *grOptions {
 // WithGoroutineDump set the goroutine dump options.
 func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.grOpts.SetTrigger(min, abs, diff)
+		opts.grOpts.Set(min, abs, diff)
 		opts.grOpts.GoroutineTriggerNumMax = max
 		return
 	})
@@ -258,16 +257,16 @@ type typeOption struct {
 	TriggerDiff int
 }
 
-func newTypeOpts(enable bool, triggerMin, triggerAbs, triggerDiff int) *typeOption {
+func newTypeOpts(triggerMin, triggerAbs, triggerDiff int) *typeOption {
 	return &typeOption{
-		Enable:      enable,
+		Enable:      false,
 		TriggerMin:  triggerMin,
 		TriggerAbs:  triggerAbs,
 		TriggerDiff: triggerDiff,
 	}
 }
 
-func (base *typeOption) SetTrigger(min, abs, diff int) {
+func (base *typeOption) Set(min, abs, diff int) {
 	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
 }
 
@@ -277,7 +276,6 @@ func (base *typeOption) SetTrigger(min, abs, diff int) {
 //   2. memory usage > TriggerAbs.
 func newMemOptions() *typeOption {
 	return newTypeOpts(
-		false,
 		defaultMemTriggerMin,
 		defaultMemTriggerAbs,
 		defaultMemTriggerDiff)
@@ -286,7 +284,7 @@ func newMemOptions() *typeOption {
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.memOpts.SetTrigger(min, abs, diff)
+		opts.memOpts.Set(min, abs, diff)
 		return
 	})
 }
@@ -298,7 +296,6 @@ func WithMemDump(min int, diff int, abs int) Option {
 // in percent.
 func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
-		false,
 		defaultGCHeapTriggerMin,
 		defaultGCHeapTriggerAbs,
 		defaultGCHeapTriggerDiff)
@@ -307,7 +304,7 @@ func newGCHeapOptions() *typeOption {
 // WithGCHeapDump set the GC heap dump options.
 func WithGCHeapDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.gCHeapOpts.SetTrigger(min, abs, diff)
+		opts.gCHeapOpts.Set(min, abs, diff)
 		return
 	})
 }
@@ -322,7 +319,6 @@ func WithMemoryLimit(limit uint64) Option {
 
 func newThreadOptions() *typeOption {
 	return newTypeOpts(
-		false,
 		defaultMemTriggerMin,
 		defaultMemTriggerAbs,
 		defaultMemTriggerDiff)
@@ -331,7 +327,7 @@ func newThreadOptions() *typeOption {
 // WithThreadDump set the thread dump options.
 func WithThreadDump(min, diff, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.threadOpts.SetTrigger(min, abs, diff)
+		opts.threadOpts.Set(min, abs, diff)
 		return
 	})
 }
@@ -341,10 +337,9 @@ func WithThreadDump(min, diff, abs int) Option {
 // in percent
 //   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
 //   2. cpu usage > CPUTriggerAbs
-// in percent
+// in percent.
 func newCPUOptions() *typeOption {
 	return newTypeOpts(
-		false,
 		defaultCPUTriggerMin,
 		defaultCPUTriggerAbs,
 		defaultCPUTriggerDiff)
@@ -353,7 +348,7 @@ func newCPUOptions() *typeOption {
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.SetTrigger(min, abs, diff)
+		opts.cpuOpts.Set(min, abs, diff)
 		return
 	})
 }

@@ -187,6 +187,7 @@ func (h *Holmes) startDumpLoop() {
 	// dump loop
 	ticker := time.NewTicker(h.opts.CollectInterval)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-h.opts.intervalResetting:
@@ -552,19 +553,15 @@ func (h *Holmes) EnableDump(curCPU int) (err error) {
 	return nil
 }
 
+// Set sets holmes's optional after initialing.
 func (h *Holmes) Set(opts ...Option) error {
 	h.opts.L.Lock()
 	defer h.opts.L.Unlock()
+
 	for _, opt := range opts {
 		if err := opt.apply(h.opts); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (h *Holmes) GetOpts() options {
-	h.opts.L.Lock()
-	defer h.opts.L.Unlock()
-	return *h.opts
 }

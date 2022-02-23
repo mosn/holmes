@@ -62,11 +62,6 @@ func TestSetGrOpts(t *testing.T) {
 		log.Fatalf("fail to set opts on running time.")
 	}
 
-	curOpts := h.GetOpts()
-	grOpts := curOpts.GetGrOpts()
-	if grOpts.TriggerMin != min && grOpts.TriggerDiff != diff && grOpts.TriggerAbs != diff {
-		log.Fatalf("wrong")
-	}
 	time.Sleep(5 * time.Second)
 	if before.Equal(h.grCoolDownTime) {
 		log.Fatalf("fail")
