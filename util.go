@@ -202,9 +202,9 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 		// write to log
 		if dumpOpts.DumpFullStack {
 			res := trimResult(data)
-			return fmt.Errorf(res)
+			return fmt.Errorf(res) // nolint:goerr113
 		}
-		return fmt.Errorf(data.String()) // nolint:goerr113
+		return fmt.Errorf(data.String())
 	}
 
 	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
