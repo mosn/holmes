@@ -201,14 +201,15 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 	if dumpOpts.DumpProfileType == textDump {
 		// write to log
 		if dumpOpts.DumpFullStack {
-			return fmt.Errorf(trimResult(data))
+			res := trimResult(data)
+			return fmt.Errorf(res)
 		}
 		return fmt.Errorf(data.String())
 	}
 
 	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
 
-	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) ////nolint:gosec
+	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
 	if err != nil {
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
 	}
