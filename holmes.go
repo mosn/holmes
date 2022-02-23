@@ -259,7 +259,6 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 }
 
 func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
-
 	if !matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax) {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
@@ -295,7 +294,6 @@ func (h *Holmes) memCheckAndDump(mem int) {
 }
 
 func (h *Holmes) memProfile(rss int, c typeOption) bool {
-
 	if !matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
@@ -335,7 +333,6 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 }
 
 func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
-
 	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
@@ -379,7 +376,6 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 }
 
 func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
-
 	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
@@ -508,6 +504,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 
 	return true
 }
+
 func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts grOptions, dumpType configureType, currentStat int) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,

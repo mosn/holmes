@@ -192,9 +192,7 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 }
 
 func getBinaryFileName(filePath string, dumpType configureType) string {
-	var (
-		binarySuffix = time.Now().Format("20060102150405.000") + ".bin"
-	)
+	binarySuffix := time.Now().Format("20060102150405.000") + ".bin"
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
 }

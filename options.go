@@ -182,7 +182,7 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 		opts.DumpPath = filepath.Dir(f)
 		logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil && os.IsNotExist(err) {
-			if err = os.MkdirAll(opts.DumpPath, 0755); err != nil {
+			if err = os.MkdirAll(opts.DumpPath, 0o755); err != nil {
 				return
 			}
 			logger, err = os.OpenFile(filepath.Clean(f), defaultLoggerFlags, defaultLoggerPerm)
@@ -266,6 +266,7 @@ func newTypeOpts(enable bool, triggerMin, triggerAbs, triggerDiff int) *typeOpti
 		TriggerDiff: triggerDiff,
 	}
 }
+
 func (base *typeOption) SetTrigger(min, abs, diff int) {
 	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
 }
