@@ -148,8 +148,9 @@ func WithCollectInterval(interval string) Option {
 			return
 		}
 
-		opts.intervalResetting <- struct{}{}
 		opts.CollectInterval = newInterval
+		opts.intervalResetting <- struct{}{}
+
 		return
 	})
 }
