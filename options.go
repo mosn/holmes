@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,23 +18,22 @@ type options struct {
 	// overwrite the system level memory limitation when > 0.
 	memoryLimit uint64
 
-	// full path to put the profile files, default /tmp
-	DumpPath string
-	// default dump to binary profile, set to true if you want a text profile
-	DumpProfileType dumpProfileType
-	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
-	DumpFullStack bool
+	*DumpOptions
 
 	LogLevel int
 	// Logger *os.File
 	Logger atomic.Value
 
 	// interval for dump loop, default 5s
-	CollectInterval time.Duration
+	CollectInterval   time.Duration
+	intervalResetting chan struct{}
 
 	// the cooldown time after every type of dump
 	// interval for cooldown，default 1m
 	// the cpu/mem/goroutine have different cooldowns of their own
+
+	// todo should we move CoolDown into Gr/CPU/MEM/GCheap Opts and support
+	// set different `CoolDown` for different opts?
 	CoolDown time.Duration
 
 	// if current cpu usage percent is greater than CPUMaxPercent,
@@ -41,12 +41,66 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
-	logOpts    *loggerOptions
-	GrOpts     *grOptions
-	MemOpts    *memOptions
-	GCHeapOpts *gcHeapOptions
-	CPUOpts    *cpuOptions
-	ThreadOpts *threadOptions
+	// if write lock is held mean holmes's
+	// configuration is being modified.
+	L *sync.RWMutex
+
+	logOpts *loggerOptions
+	grOpts  *grOptions
+
+	memOpts    *typeOption
+	gCHeapOpts *typeOption
+	cpuOpts    *typeOption
+	threadOpts *typeOption
+}
+
+// DumpOptions contains configuration about dump file.
+type DumpOptions struct {
+	// full path to put the profile files, default /tmp
+	DumpPath string
+	// default dump to binary profile, set to true if you want a text profile
+	DumpProfileType dumpProfileType
+	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
+	DumpFullStack bool
+}
+
+// GetMemOpts return a copy of memOpts.
+func (o *options) GetMemOpts() typeOption {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.memOpts
+}
+
+// GetCPUOpts return a copy of cpuOpts
+// if cpuOpts not exist return a empty typeOption and false.
+func (o *options) GetCPUOpts() typeOption {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.cpuOpts
+}
+
+// GetGrOpts return a copy of memOpts
+// if grOpts not exist return a empty grOptions and false.
+func (o *options) GetGrOpts() grOptions {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.grOpts
+}
+
+// GetThreadOpts return a copy of memOpts
+// if threadOpts not exist return a empty typeOption and false.
+func (o *options) GetThreadOpts() typeOption {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.threadOpts
+}
+
+// GetGcHeapOpts return a copy of memOpts
+// if gCHeapOpts not exist return a empty typeOption and false.
+func (o *options) GetGcHeapOpts() typeOption {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.gCHeapOpts
 }
 
 // Option holmes option type.
@@ -62,18 +116,22 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	o := &options{
-		logOpts:         newLoggerOptions(),
-		GrOpts:          newGrOptions(),
-		MemOpts:         newMemOptions(),
-		GCHeapOpts:      newGCHeapOptions(),
-		CPUOpts:         newCPUOptions(),
-		ThreadOpts:      newThreadOptions(),
-		LogLevel:        LogLevelDebug,
-		CollectInterval: defaultInterval,
-		CoolDown:        defaultCooldown,
-		DumpPath:        defaultDumpPath,
-		DumpProfileType: defaultDumpProfileType,
-		DumpFullStack:   false,
+		logOpts:           newLoggerOptions(),
+		grOpts:            newGrOptions(),
+		memOpts:           newMemOptions(),
+		gCHeapOpts:        newGCHeapOptions(),
+		cpuOpts:           newCPUOptions(),
+		threadOpts:        newThreadOptions(),
+		LogLevel:          LogLevelDebug,
+		CollectInterval:   defaultInterval,
+		intervalResetting: make(chan struct{}, 1),
+		CoolDown:          defaultCooldown,
+		DumpOptions: &DumpOptions{
+			DumpPath:        defaultDumpPath,
+			DumpProfileType: defaultDumpProfileType,
+			DumpFullStack:   false,
+		},
+		L: &sync.RWMutex{},
 	}
 	o.Logger.Store(os.Stdout)
 	return o
@@ -83,7 +141,16 @@ func newOptions() *options {
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCollectInterval(interval string) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CollectInterval, err = time.ParseDuration(interval)
+		// CollectInterval wouldn't be zero value, because it
+		// will be initialized as defaultInterval at newOptions()
+		newInterval, err := time.ParseDuration(interval)
+		if err != nil || opts.CollectInterval.Seconds() == newInterval.Seconds() {
+			return
+		}
+
+		opts.CollectInterval = newInterval
+		opts.intervalResetting <- struct{}{}
+
 		return
 	})
 }
@@ -156,89 +223,89 @@ func withDumpProfileType(profileType dumpProfileType) Option {
 
 type grOptions struct {
 	// enable the goroutine dumper, should dump if one of the following requirements is matched
-	//   1. goroutine_num > GoroutineTriggerNumMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > GoroutineTriggerPercentDiff
+	//   1. goroutine_num > TriggerMin && goroutine_num < GoroutineTriggerNumMax && goroutine diff percent > TriggerDiff
 	//   2. goroutine_num > GoroutineTriggerNumAbsNum && goroutine_num < GoroutineTriggerNumMax
-	Enable                      bool
-	GoroutineTriggerNumMin      int // goroutine trigger min in number
-	GoroutineTriggerPercentDiff int // goroutine trigger diff in percent
-	GoroutineTriggerNumAbs      int // goroutine trigger abs in number
-	GoroutineTriggerNumMax      int // goroutine trigger max in number
+	*typeOption
+	GoroutineTriggerNumMax int // goroutine trigger max in number
 }
 
 func newGrOptions() *grOptions {
-	return &grOptions{
-		Enable:                      false,
-		GoroutineTriggerNumAbs:      defaultGoroutineTriggerAbs,
-		GoroutineTriggerPercentDiff: defaultGoroutineTriggerDiff,
-		GoroutineTriggerNumMin:      defaultGoroutineTriggerMin,
-	}
+	base := newTypeOpts(
+		defaultGoroutineTriggerMin,
+		defaultGoroutineTriggerAbs,
+		defaultGoroutineTriggerDiff)
+	return &grOptions{typeOption: base}
 }
 
 // WithGoroutineDump set the goroutine dump options.
 func WithGoroutineDump(min int, diff int, abs int, max int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.GrOpts.GoroutineTriggerNumMin = min
-		opts.GrOpts.GoroutineTriggerPercentDiff = diff
-		opts.GrOpts.GoroutineTriggerNumAbs = abs
-		opts.GrOpts.GoroutineTriggerNumMax = max
+		opts.grOpts.Set(min, abs, diff)
+		opts.grOpts.GoroutineTriggerNumMax = max
 		return
 	})
 }
 
-type memOptions struct {
-	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. memory usage > MemTriggerPercentMin && memory usage diff > MemTriggerPercentDiff
-	//   2. memory usage > MemTriggerPercentAbs
-	Enable                bool
-	MemTriggerPercentMin  int // mem trigger minimum in percent
-	MemTriggerPercentDiff int // mem trigger diff in percent
-	MemTriggerPercentAbs  int // mem trigger absolute in percent
+type typeOption struct {
+	Enable bool
+	// mem/cpu/gcheap trigger minimum in percent, goroutine/thread trigger minimum in number
+	TriggerMin int
+
+	// mem/cpu/gcheap trigger abs in percent, goroutine/thread trigger abs in number
+	TriggerAbs int
+
+	// mem/cpu/gcheap/goroutine/thread trigger diff in percent
+	TriggerDiff int
 }
 
-func newMemOptions() *memOptions {
-	return &memOptions{
-		Enable:                false,
-		MemTriggerPercentAbs:  defaultMemTriggerAbs,
-		MemTriggerPercentDiff: defaultMemTriggerDiff,
-		MemTriggerPercentMin:  defaultMemTriggerMin,
+func newTypeOpts(triggerMin, triggerAbs, triggerDiff int) *typeOption {
+	return &typeOption{
+		Enable:      false,
+		TriggerMin:  triggerMin,
+		TriggerAbs:  triggerAbs,
+		TriggerDiff: triggerDiff,
 	}
+}
+
+func (base *typeOption) Set(min, abs, diff int) {
+	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
+}
+
+// newMemOptions
+// enable the heap dumper, should dump if one of the following requirements is matched
+//   1. memory usage > TriggerMin && memory usage diff > TriggerDiff
+//   2. memory usage > TriggerAbs.
+func newMemOptions() *typeOption {
+	return newTypeOpts(
+		defaultMemTriggerMin,
+		defaultMemTriggerAbs,
+		defaultMemTriggerDiff)
 }
 
 // WithMemDump set the memory dump options.
 func WithMemDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.MemOpts.MemTriggerPercentMin = min
-		opts.MemOpts.MemTriggerPercentDiff = diff
-		opts.MemOpts.MemTriggerPercentAbs = abs
+		opts.memOpts.Set(min, abs, diff)
 		return
 	})
 }
 
-type gcHeapOptions struct {
-	// enable the heap dumper, should dump if one of the following requirements is matched
-	//   1. GC heap usage > GCHeapTriggerPercentMin && GC heap usage diff > GCHeapTriggerPercentDiff
-	//   2. GC heap usage > GCHeapTriggerPercentAbs
-	Enable                   bool
-	GCHeapTriggerPercentMin  int // GC heap trigger minimum in percent
-	GCHeapTriggerPercentDiff int // GC heap trigger diff in percent
-	GCHeapTriggerPercentAbs  int // GC heap trigger absolute in percent
-}
-
-func newGCHeapOptions() *gcHeapOptions {
-	return &gcHeapOptions{
-		Enable:                   false,
-		GCHeapTriggerPercentAbs:  defaultGCHeapTriggerAbs,
-		GCHeapTriggerPercentDiff: defaultGCHeapTriggerDiff,
-		GCHeapTriggerPercentMin:  defaultGCHeapTriggerMin,
-	}
+// newGCHeapOptions
+// enable the heap dumper, should dump if one of the following requirements is matched
+//   1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
+//   2. GC heap usage > TriggerAbs
+// in percent.
+func newGCHeapOptions() *typeOption {
+	return newTypeOpts(
+		defaultGCHeapTriggerMin,
+		defaultGCHeapTriggerAbs,
+		defaultGCHeapTriggerDiff)
 }
 
 // WithGCHeapDump set the GC heap dump options.
 func WithGCHeapDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.GCHeapOpts.GCHeapTriggerPercentMin = min
-		opts.GCHeapOpts.GCHeapTriggerPercentDiff = diff
-		opts.GCHeapOpts.GCHeapTriggerPercentAbs = abs
+		opts.gCHeapOpts.Set(min, abs, diff)
 		return
 	})
 }
@@ -251,57 +318,38 @@ func WithMemoryLimit(limit uint64) Option {
 	})
 }
 
-type threadOptions struct {
-	Enable                   bool
-	ThreadTriggerPercentMin  int // thread trigger min in number
-	ThreadTriggerPercentDiff int // thread trigger diff in percent
-	ThreadTriggerPercentAbs  int // thread trigger abs in number
-}
-
-func newThreadOptions() *threadOptions {
-	return &threadOptions{
-		Enable:                   false,
-		ThreadTriggerPercentAbs:  defaultThreadTriggerAbs,
-		ThreadTriggerPercentDiff: defaultThreadTriggerDiff,
-		ThreadTriggerPercentMin:  defaultThreadTriggerMin,
-	}
+func newThreadOptions() *typeOption {
+	return newTypeOpts(
+		defaultMemTriggerMin,
+		defaultMemTriggerAbs,
+		defaultMemTriggerDiff)
 }
 
 // WithThreadDump set the thread dump options.
 func WithThreadDump(min, diff, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.ThreadOpts.ThreadTriggerPercentMin = min
-		opts.ThreadOpts.ThreadTriggerPercentDiff = diff
-		opts.ThreadOpts.ThreadTriggerPercentAbs = abs
+		opts.threadOpts.Set(min, abs, diff)
 		return
 	})
 }
 
-type cpuOptions struct {
-	// enable the cpu dumper, should dump if one of the following requirements is matched
-	//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
-	//   2. cpu usage > CPUTriggerAbs
-	Enable                bool
-	CPUTriggerPercentMin  int // cpu trigger min in percent
-	CPUTriggerPercentDiff int // cpu trigger diff in percent
-	CPUTriggerPercentAbs  int // cpu trigger abs in percent
-}
-
-func newCPUOptions() *cpuOptions {
-	return &cpuOptions{
-		Enable:                false,
-		CPUTriggerPercentAbs:  defaultCPUTriggerAbs,
-		CPUTriggerPercentDiff: defaultCPUTriggerDiff,
-		CPUTriggerPercentMin:  defaultCPUTriggerMin,
-	}
+// newCPUOptions
+// enable the cpu dumper, should dump if one of the following requirements is matched
+// in percent
+//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
+//   2. cpu usage > CPUTriggerAbs
+// in percent.
+func newCPUOptions() *typeOption {
+	return newTypeOpts(
+		defaultCPUTriggerMin,
+		defaultCPUTriggerAbs,
+		defaultCPUTriggerDiff)
 }
 
 // WithCPUDump set the cpu dump options.
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.CPUOpts.CPUTriggerPercentMin = min
-		opts.CPUOpts.CPUTriggerPercentDiff = diff
-		opts.CPUOpts.CPUTriggerPercentAbs = abs
+		opts.cpuOpts.Set(min, abs, diff)
 		return
 	})
 }
