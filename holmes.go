@@ -337,10 +337,10 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 }
 
 func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
-	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig) {
+	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
 		// let user know why this should not dump
 		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
-			c.TriggerMin, c.TriggerAbs, c.TriggerAbs, NotSupportTypeMaxConfig,
+			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
 		return false
