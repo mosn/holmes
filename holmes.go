@@ -51,7 +51,8 @@ type Holmes struct {
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
-		opts: newOptions(),
+		opts:    newOptions(),
+		stopped: 1, // Initialization should be off
 	}
 
 	for _, opt := range opts {
@@ -159,7 +160,9 @@ func (h *Holmes) startGCCycleLoop() {
 
 // Start starts the dump loop of holmes.
 func (h *Holmes) Start() {
-	atomic.StoreInt64(&h.stopped, 0)
+	if !atomic.CompareAndSwapInt64(&h.stopped, 1, 0) {
+		return
+	}
 	h.initEnvironment()
 	go h.startDumpLoop()
 
