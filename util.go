@@ -2,6 +2,7 @@ package holmes
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
@@ -191,9 +192,31 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 }
 
 func getBinaryFileName(filePath string, dumpType configureType) string {
-	var (
-		binarySuffix = time.Now().Format("20060102150405.000") + ".bin"
-	)
+	binarySuffix := time.Now().Format("20060102150405.000") + ".bin"
 
 	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
+}
+
+func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions) error {
+	if dumpOpts.DumpProfileType == textDump {
+		// write to log
+		if dumpOpts.DumpFullStack {
+			res := trimResult(data)
+			return fmt.Errorf(res) // nolint:goerr113
+		}
+		return fmt.Errorf(data.String())
+	}
+
+	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
+
+	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
+	if err != nil {
+		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
+	}
+	defer bf.Close() //nolint:errcheck,gosec
+
+	if _, err = bf.Write(data.Bytes()); err != nil {
+		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
+	}
+	return nil
 }

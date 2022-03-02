@@ -1,0 +1,5 @@
+./.idea/*
+
+*.log
+
+./test_case_gen
