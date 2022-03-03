@@ -76,8 +76,8 @@ func getUsage() (float64, uint64, int, int, error) {
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
-	rss := mem.RSS
 
+	rss := mem.RSS
 	gNum := runtime.NumGoroutine()
 	tNum := getThreadNum()
 
@@ -85,15 +85,17 @@ func getUsage() (float64, uint64, int, int, error) {
 }
 
 // get cpu core number limited by CGroup.
-func getCGroupCpuCore() (float64, error) {
+func getCGroupCPUCore() (float64, error) {
 	cpuPeriod, err := readUint(cgroupCpuPeriodPath)
 	if cpuPeriod == 0 || err != nil {
 		return 0, err
 	}
-	cpuQuota, err := readUint(cgroupCpuQuotaPath)
-	if err != nil {
+
+	var cpuQuota uint64
+	if cpuQuota, err = readUint(cgroupCpuQuotaPath); err != nil {
 		return 0, err
 	}
+
 	return float64(cpuQuota) / float64(cpuPeriod), nil
 }
 

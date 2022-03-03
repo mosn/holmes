@@ -12,7 +12,7 @@ import (
 )
 
 type options struct {
-	UseGoProcAsCpuCore bool // use the go max procs number as the CPU core number when it's true
+	UseGoProcAsCPUCore bool // use the go max procs number as the CPU core number when it's true
 	UseCGroup          bool // use the CGroup to calc cpu/memory when it's true
 
 	// overwrite the system level memory limitation when > 0.
@@ -363,10 +363,10 @@ func WithCPUDump(min int, diff int, abs int) Option {
 	})
 }
 
-// WithCGroup set holmes use cgroup or not.
+// WithGoProcAsCPUCore set holmes use cgroup or not.
 func WithGoProcAsCPUCore(enabled bool) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.UseGoProcAsCpuCore = enabled
+		opts.UseGoProcAsCPUCore = enabled
 		return
 	})
 }

@@ -493,12 +493,15 @@ func (h *Holmes) getCpuCore() (float64, error) {
 	if h.opts.cpuCore > 0 {
 		return h.opts.cpuCore, nil
 	}
-	if h.opts.UseGoProcAsCpuCore {
+
+	if h.opts.UseGoProcAsCPUCore {
 		return float64(runtime.GOMAXPROCS(-1)), nil
 	}
+
 	if h.opts.UseCGroup {
-		return getCGroupCpuCore()
+		return getCGroupCPUCore()
 	}
+
 	return float64(runtime.NumCPU()), nil
 }
 
