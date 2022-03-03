@@ -205,7 +205,7 @@ func (h *Holmes) startDumpLoop() {
 				return
 			}
 
-			cpuCore, err := h.getCpuCore()
+			cpuCore, err := h.getCPUCore()
 			if cpuCore == 0 || err != nil {
 				h.logf("[Holmes] get CPU core failed, CPU core: %v, error: %v", cpuCore, err)
 				return
@@ -489,7 +489,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	}
 }
 
-func (h *Holmes) getCpuCore() (float64, error) {
+func (h *Holmes) getCPUCore() (float64, error) {
 	if h.opts.cpuCore > 0 {
 		return h.opts.cpuCore, nil
 	}

@@ -73,7 +73,7 @@ func TestCpuCore(t *testing.T) {
 		WithCGroup(false),
 		WithGoProcAsCPUCore(false),
 	)
-	cpuCore1, _ := h.getCpuCore()
+	cpuCore1, _ := h.getCPUCore()
 	goProc1 := runtime.GOMAXPROCS(-1)
 
 	// system cpu core matches go procs
@@ -84,7 +84,7 @@ func TestCpuCore(t *testing.T) {
 	// go proc = system cpu core + 1
 	runtime.GOMAXPROCS(goProc1 + 1)
 
-	cpuCore2, _ := h.getCpuCore()
+	cpuCore2, _ := h.getCPUCore()
 	goProc2 := runtime.GOMAXPROCS(-1)
 	if cpuCore2 != float64(goProc2)-1 {
 		log.Fatalf("cpuCore2 %v not equal goProc2-1 %v", cpuCore2, goProc2)
@@ -95,7 +95,7 @@ func TestCpuCore(t *testing.T) {
 		WithCPUCore(cpuCore1 + 5),
 	)
 
-	cpuCore3, _ := h.getCpuCore()
+	cpuCore3, _ := h.getCPUCore()
 	if cpuCore3 != cpuCore1+5 {
 		log.Fatalf("cpuCore3 %v not equal cpuCore1+5 %v", cpuCore3, cpuCore1+5)
 	}

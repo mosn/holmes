@@ -86,12 +86,13 @@ func getUsage() (float64, uint64, int, int, error) {
 
 // get cpu core number limited by CGroup.
 func getCGroupCPUCore() (float64, error) {
+	var cpuQuota uint64
+
 	cpuPeriod, err := readUint(cgroupCpuPeriodPath)
 	if cpuPeriod == 0 || err != nil {
 		return 0, err
 	}
 
-	var cpuQuota uint64
 	if cpuQuota, err = readUint(cgroupCpuQuotaPath); err != nil {
 		return 0, err
 	}
