@@ -204,7 +204,11 @@ func (h *Holmes) startDumpLoop() {
 			fmt.Printf("[Holmes] collect interval is resetting to [%v]\n", itv) //nolint:forbidigo
 			ticker = time.NewTicker(itv)
 
-		case <-ticker.C:
+		default:
+			// bug fix: https://github.com/mosn/holmes/issues/63
+			// make sure that the message inside intervalResetting channel
+			// would be consumed before ticker.C.
+			<-ticker.C
 			if atomic.LoadInt64(&h.stopped) == 1 {
 				fmt.Println("[Holmes] dump loop stopped") //nolint:forbidigo
 				return
