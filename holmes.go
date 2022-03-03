@@ -161,6 +161,8 @@ func (h *Holmes) startGCCycleLoop() {
 // Start starts the dump loop of holmes.
 func (h *Holmes) Start() {
 	if !atomic.CompareAndSwapInt64(&h.stopped, 1, 0) {
+		//nolint
+		fmt.Println("Holmes has started, please don't start it again.")
 		return
 	}
 	h.initEnvironment()
