@@ -205,7 +205,19 @@ func (h *Holmes) startDumpLoop() {
 				return
 			}
 
-			cpu, mem, gNum, tNum, err := collect()
+			cpuCore, err := h.getCpuCore()
+			if cpuCore == 0 || err != nil {
+				h.logf("[Holmes] get CPU core failed, CPU core: %v, error: %v", cpuCore, err)
+				return
+			}
+
+			memoryLimit, err := h.getMemoryLimit()
+			if memoryLimit == 0 || err != nil {
+				h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
+				return
+			}
+
+			cpu, mem, gNum, tNum, err := collect(cpuCore, memoryLimit)
 			if err != nil {
 				h.logf(err.Error())
 
@@ -477,6 +489,19 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	}
 }
 
+func (h *Holmes) getCpuCore() (float64, error) {
+	if h.opts.cpuCore > 0 {
+		return h.opts.cpuCore, nil
+	}
+	if h.opts.UseGoProcAsCpuCore {
+		return float64(runtime.GOMAXPROCS(-1)), nil
+	}
+	if h.opts.UseCGroup {
+		return getCGroupCpuCore()
+	}
+	return float64(runtime.NumCPU()), nil
+}
+
 func (h *Holmes) getMemoryLimit() (uint64, error) {
 	if h.opts.memoryLimit > 0 {
 		return h.opts.memoryLimit, nil
@@ -532,14 +557,10 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dump
 }
 
 func (h *Holmes) initEnvironment() {
-	// choose whether the max memory is limited by cgroup
+	// whether the max memory is limited by cgroup
 	if h.opts.UseCGroup {
-		// use cgroup
-		getUsage = getUsageCGroup
 		h.logf("[Holmes] use cgroup to limit memory")
 	} else {
-		// not use cgroup
-		getUsage = getUsageNormal
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
 
