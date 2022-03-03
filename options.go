@@ -312,6 +312,7 @@ func WithGCHeapDump(min int, diff int, abs int) Option {
 }
 
 // WithCPUCore overwrite the system level CPU core number when it > 0.
+// it's not a good idea to modify it on fly since it affects the CPU percent caculation.
 func WithCPUCore(cpuCore float64) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.cpuCore = cpuCore
