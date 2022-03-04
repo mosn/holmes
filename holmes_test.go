@@ -3,6 +3,7 @@ package holmes
 import (
 	"log"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -64,5 +65,38 @@ func TestSetGrOpts(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	if before.Equal(h.grCoolDownTime) {
 		log.Fatalf("fail")
+	}
+}
+
+func TestCpuCore(t *testing.T) {
+	h.Set(
+		WithCGroup(false),
+		WithGoProcAsCPUCore(false),
+	)
+	cpuCore1, _ := h.getCPUCore()
+	goProc1 := runtime.GOMAXPROCS(-1)
+
+	// system cpu core matches go procs
+	if cpuCore1 != float64(goProc1) {
+		log.Fatalf("cpuCore1 %v not equal goProc1 %v", cpuCore1, goProc1)
+	}
+
+	// go proc = system cpu core + 1
+	runtime.GOMAXPROCS(goProc1 + 1)
+
+	cpuCore2, _ := h.getCPUCore()
+	goProc2 := runtime.GOMAXPROCS(-1)
+	if cpuCore2 != float64(goProc2)-1 {
+		log.Fatalf("cpuCore2 %v not equal goProc2-1 %v", cpuCore2, goProc2)
+	}
+
+	// set cpu core directly
+	h.Set(
+		WithCPUCore(cpuCore1 + 5),
+	)
+
+	cpuCore3, _ := h.getCPUCore()
+	if cpuCore3 != cpuCore1+5 {
+		log.Fatalf("cpuCore3 %v not equal cpuCore1+5 %v", cpuCore3, cpuCore1+5)
 	}
 }
