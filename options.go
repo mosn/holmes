@@ -19,6 +19,8 @@ type options struct {
 	memoryLimit uint64
 	cpuCore     float64
 
+	*ShrinkThrOptions
+
 	*DumpOptions
 
 	LogLevel int
@@ -63,6 +65,21 @@ type DumpOptions struct {
 	DumpProfileType dumpProfileType
 	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
 	DumpFullStack bool
+}
+
+// ShrinkThrOptions contains the configuration about shrink thread
+type ShrinkThrOptions struct {
+	// shrink the thread number when it exceeds the max threshold that specified in Threshold
+	Enable    bool
+	Threshold int
+	Delay     time.Duration // start to shrink thread after the delay time.
+}
+
+// GetShrinkThreadOpts return a copy of ShrinkThrOptions.
+func (o *options) GetShrinkThreadOpts() ShrinkThrOptions {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.ShrinkThrOptions
 }
 
 // GetMemOpts return a copy of memOpts.
@@ -131,6 +148,9 @@ func newOptions() *options {
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
 			DumpFullStack:   false,
+		},
+		ShrinkThrOptions: &ShrinkThrOptions{
+			Enable: false,
 		},
 		L: &sync.RWMutex{},
 	}
@@ -415,6 +435,18 @@ func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
 		}
 
 		opts.logOpts.SplitLoggerSize = parseShardLoggerSize
+		return
+	})
+}
+
+// WithShrinkThread enable/disable shrink thread when the thread number exceed the max threshold.
+func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.ShrinkThrOptions.Enable = enable
+		if threshold > 0 {
+			opts.ShrinkThrOptions.Threshold = threshold
+		}
+		opts.ShrinkThrOptions.Delay = delay
 		return
 	})
 }

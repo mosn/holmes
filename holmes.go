@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -15,24 +16,26 @@ type Holmes struct {
 	opts *options
 
 	// stats
-	changelog          int32
-	collectCount       int
-	gcCycleCount       int
-	threadTriggerCount int
-	cpuTriggerCount    int
-	memTriggerCount    int
-	grTriggerCount     int
-	gcHeapTriggerCount int
+	changelog                int32
+	collectCount             int
+	gcCycleCount             int
+	threadTriggerCount       int
+	cpuTriggerCount          int
+	memTriggerCount          int
+	grTriggerCount           int
+	gcHeapTriggerCount       int
+	shrinkThreadTriggerCount int
 
 	// channel for GC sweep finalizer event
 	finCh chan struct{}
 
 	// cooldown
-	threadCoolDownTime time.Time
-	cpuCoolDownTime    time.Time
-	memCoolDownTime    time.Time
-	gcHeapCoolDownTime time.Time
-	grCoolDownTime     time.Time
+	threadCoolDownTime    time.Time
+	cpuCoolDownTime       time.Time
+	memCoolDownTime       time.Time
+	gcHeapCoolDownTime    time.Time
+	grCoolDownTime        time.Time
+	shrinkThrCoolDownTime time.Time
 
 	// GC heap triggered, need to dump next time.
 	gcHeapTriggered bool
@@ -257,7 +260,7 @@ func (h *Holmes) startDumpLoop() {
 			h.memCheckAndDump(mem)
 			h.cpuCheckAndDump(cpu)
 			h.threadCheckAndDump(tNum)
-
+			h.threadCheckAndShrink(tNum)
 		}
 	}
 }
@@ -335,6 +338,28 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	return true
 }
 
+func (h *Holmes) threadCheckAndShrink(threadNum int) {
+	opts := h.opts.GetShrinkThreadOpts()
+
+	if !opts.Enable {
+		return
+	}
+
+	if h.shrinkThrCoolDownTime.After(time.Now()) {
+		return
+	}
+
+	if threadNum > opts.Threshold {
+		// 100x Delay time a cooldown time
+		h.shrinkThrCoolDownTime = time.Now().Add(opts.Delay * 100)
+
+		h.logf("current thread number(%v) larger than TriggerAbs(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
+		time.AfterFunc(opts.Delay, func() {
+			h.startShrinkThread()
+		})
+	}
+}
+
 // thread start.
 func (h *Holmes) threadCheckAndDump(threadNum int) {
 	// get a copy instead of locking it
@@ -354,6 +379,34 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
+	}
+}
+
+// TODO: better only shrink the threads that are idle.
+func (h *Holmes) startShrinkThread() {
+	opts := h.opts.GetShrinkThreadOpts()
+	curThreadNum := getThreadNum()
+	n := curThreadNum - opts.Threshold
+
+	// check again after the timer triggered
+	if opts.Enable && n > 0 {
+		h.shrinkThreadTriggerCount++
+		h.logf("start to shrink %v threads, now: %v", n, curThreadNum)
+
+		var wg sync.WaitGroup
+		wg.Add(n)
+		for i := 0; i < n; i++ {
+			// avoid close too much thread in batch.
+			time.Sleep(time.Millisecond * 100)
+
+			go func() {
+				defer wg.Done()
+				runtime.LockOSThread()
+			}()
+		}
+		wg.Wait()
+
+		h.logf("finished shrink threads, now: %v", getThreadNum())
 	}
 }
 
