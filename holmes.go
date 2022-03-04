@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -15,24 +16,26 @@ type Holmes struct {
 	opts *options
 
 	// stats
-	changelog          int32
-	collectCount       int
-	gcCycleCount       int
-	threadTriggerCount int
-	cpuTriggerCount    int
-	memTriggerCount    int
-	grTriggerCount     int
-	gcHeapTriggerCount int
+	changelog                int32
+	collectCount             int
+	gcCycleCount             int
+	threadTriggerCount       int
+	cpuTriggerCount          int
+	memTriggerCount          int
+	grTriggerCount           int
+	gcHeapTriggerCount       int
+	shrinkThreadTriggerCount int
 
 	// channel for GC sweep finalizer event
 	finCh chan struct{}
 
 	// cooldown
-	threadCoolDownTime time.Time
-	cpuCoolDownTime    time.Time
-	memCoolDownTime    time.Time
-	gcHeapCoolDownTime time.Time
-	grCoolDownTime     time.Time
+	threadCoolDownTime    time.Time
+	cpuCoolDownTime       time.Time
+	memCoolDownTime       time.Time
+	gcHeapCoolDownTime    time.Time
+	grCoolDownTime        time.Time
+	shrinkThrCoolDownTime time.Time
 
 	// GC heap triggered, need to dump next time.
 	gcHeapTriggered bool
@@ -204,13 +207,29 @@ func (h *Holmes) startDumpLoop() {
 			fmt.Printf("[Holmes] collect interval is resetting to [%v]\n", itv) //nolint:forbidigo
 			ticker = time.NewTicker(itv)
 
-		case <-ticker.C:
+		default:
+			// bug fix: https://github.com/mosn/holmes/issues/63
+			// make sure that the message inside intervalResetting channel
+			// would be consumed before ticker.C.
+			<-ticker.C
 			if atomic.LoadInt64(&h.stopped) == 1 {
 				fmt.Println("[Holmes] dump loop stopped") //nolint:forbidigo
 				return
 			}
 
-			cpu, mem, gNum, tNum, err := collect()
+			cpuCore, err := h.getCPUCore()
+			if cpuCore == 0 || err != nil {
+				h.logf("[Holmes] get CPU core failed, CPU core: %v, error: %v", cpuCore, err)
+				return
+			}
+
+			memoryLimit, err := h.getMemoryLimit()
+			if memoryLimit == 0 || err != nil {
+				h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
+				return
+			}
+
+			cpu, mem, gNum, tNum, err := collect(cpuCore, memoryLimit)
 			if err != nil {
 				h.logf(err.Error())
 
@@ -241,7 +260,7 @@ func (h *Holmes) startDumpLoop() {
 			h.memCheckAndDump(mem)
 			h.cpuCheckAndDump(cpu)
 			h.threadCheckAndDump(tNum)
-
+			h.threadCheckAndShrink(tNum)
 		}
 	}
 }
@@ -319,6 +338,28 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	return true
 }
 
+func (h *Holmes) threadCheckAndShrink(threadNum int) {
+	opts := h.opts.GetShrinkThreadOpts()
+
+	if !opts.Enable {
+		return
+	}
+
+	if h.shrinkThrCoolDownTime.After(time.Now()) {
+		return
+	}
+
+	if threadNum > opts.Threshold {
+		// 100x Delay time a cooldown time
+		h.shrinkThrCoolDownTime = time.Now().Add(opts.Delay * 100)
+
+		h.logf("current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
+		time.AfterFunc(opts.Delay, func() {
+			h.startShrinkThread()
+		})
+	}
+}
+
 // thread start.
 func (h *Holmes) threadCheckAndDump(threadNum int) {
 	// get a copy instead of locking it
@@ -338,6 +379,34 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
+	}
+}
+
+// TODO: better only shrink the threads that are idle.
+func (h *Holmes) startShrinkThread() {
+	opts := h.opts.GetShrinkThreadOpts()
+	curThreadNum := getThreadNum()
+	n := curThreadNum - opts.Threshold
+
+	// check again after the timer triggered
+	if opts.Enable && n > 0 {
+		h.shrinkThreadTriggerCount++
+		h.logf("start to shrink %v threads, now: %v", n, curThreadNum)
+
+		var wg sync.WaitGroup
+		wg.Add(n)
+		for i := 0; i < n; i++ {
+			// avoid close too much thread in batch.
+			time.Sleep(time.Millisecond * 100)
+
+			go func() {
+				defer wg.Done()
+				runtime.LockOSThread()
+			}()
+		}
+		wg.Wait()
+
+		h.logf("finished shrink threads, now: %v", getThreadNum())
 	}
 }
 
@@ -482,6 +551,22 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	}
 }
 
+func (h *Holmes) getCPUCore() (float64, error) {
+	if h.opts.cpuCore > 0 {
+		return h.opts.cpuCore, nil
+	}
+
+	if h.opts.UseGoProcAsCPUCore {
+		return float64(runtime.GOMAXPROCS(-1)), nil
+	}
+
+	if h.opts.UseCGroup {
+		return getCGroupCPUCore()
+	}
+
+	return float64(runtime.NumCPU()), nil
+}
+
 func (h *Holmes) getMemoryLimit() (uint64, error) {
 	if h.opts.memoryLimit > 0 {
 		return h.opts.memoryLimit, nil
@@ -537,14 +622,10 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dump
 }
 
 func (h *Holmes) initEnvironment() {
-	// choose whether the max memory is limited by cgroup
+	// whether the max memory is limited by cgroup
 	if h.opts.UseCGroup {
-		// use cgroup
-		getUsage = getUsageCGroup
 		h.logf("[Holmes] use cgroup to limit memory")
 	} else {
-		// not use cgroup
-		getUsage = getUsageNormal
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
 	}
 

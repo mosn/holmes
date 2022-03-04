@@ -12,11 +12,14 @@ import (
 )
 
 type options struct {
-	// whether use the cgroup to calc memory or not
-	UseCGroup bool
+	UseGoProcAsCPUCore bool // use the go max procs number as the CPU core number when it's true
+	UseCGroup          bool // use the CGroup to calc cpu/memory when it's true
 
 	// overwrite the system level memory limitation when > 0.
 	memoryLimit uint64
+	cpuCore     float64
+
+	*ShrinkThrOptions
 
 	*DumpOptions
 
@@ -62,6 +65,21 @@ type DumpOptions struct {
 	DumpProfileType dumpProfileType
 	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
 	DumpFullStack bool
+}
+
+// ShrinkThrOptions contains the configuration about shrink thread
+type ShrinkThrOptions struct {
+	// shrink the thread number when it exceeds the max threshold that specified in Threshold
+	Enable    bool
+	Threshold int
+	Delay     time.Duration // start to shrink thread after the delay time.
+}
+
+// GetShrinkThreadOpts return a copy of ShrinkThrOptions.
+func (o *options) GetShrinkThreadOpts() ShrinkThrOptions {
+	o.L.RLock()
+	defer o.L.RUnlock()
+	return *o.ShrinkThrOptions
 }
 
 // GetMemOpts return a copy of memOpts.
@@ -130,6 +148,9 @@ func newOptions() *options {
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
 			DumpFullStack:   false,
+		},
+		ShrinkThrOptions: &ShrinkThrOptions{
+			Enable: false,
 		},
 		L: &sync.RWMutex{},
 	}
@@ -310,6 +331,15 @@ func WithGCHeapDump(min int, diff int, abs int) Option {
 	})
 }
 
+// WithCPUCore overwrite the system level CPU core number when it > 0.
+// it's not a good idea to modify it on fly since it affects the CPU percent caculation.
+func WithCPUCore(cpuCore float64) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.cpuCore = cpuCore
+		return
+	})
+}
+
 // WithMemoryLimit overwrite the system level memory limit when it > 0.
 func WithMemoryLimit(limit uint64) Option {
 	return optionFunc(func(opts *options) (err error) {
@@ -320,9 +350,9 @@ func WithMemoryLimit(limit uint64) Option {
 
 func newThreadOptions() *typeOption {
 	return newTypeOpts(
-		defaultMemTriggerMin,
-		defaultMemTriggerAbs,
-		defaultMemTriggerDiff)
+		defaultThreadTriggerMin,
+		defaultThreadTriggerAbs,
+		defaultThreadTriggerDiff)
 }
 
 // WithThreadDump set the thread dump options.
@@ -350,6 +380,14 @@ func newCPUOptions() *typeOption {
 func WithCPUDump(min int, diff int, abs int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.cpuOpts.Set(min, abs, diff)
+		return
+	})
+}
+
+// WithGoProcAsCPUCore set holmes use cgroup or not.
+func WithGoProcAsCPUCore(enabled bool) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.UseGoProcAsCPUCore = enabled
 		return
 	})
 }
@@ -397,6 +435,18 @@ func WithLoggerSplit(enable bool, shardLoggerSize string) Option {
 		}
 
 		opts.logOpts.SplitLoggerSize = parseShardLoggerSize
+		return
+	})
+}
+
+// WithShrinkThread enable/disable shrink thread when the thread number exceed the max threshold.
+func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.ShrinkThrOptions.Enable = enable
+		if threshold > 0 {
+			opts.ShrinkThrOptions.Threshold = threshold
+		}
+		opts.ShrinkThrOptions.Delay = delay
 		return
 	})
 }
