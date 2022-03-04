@@ -320,9 +320,9 @@ func WithMemoryLimit(limit uint64) Option {
 
 func newThreadOptions() *typeOption {
 	return newTypeOpts(
-		defaultMemTriggerMin,
-		defaultMemTriggerAbs,
-		defaultMemTriggerDiff)
+		defaultThreadTriggerMin,
+		defaultThreadTriggerAbs,
+		defaultThreadTriggerDiff)
 }
 
 // WithThreadDump set the thread dump options.
