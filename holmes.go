@@ -353,7 +353,7 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 		// 100x Delay time a cooldown time
 		h.shrinkThrCoolDownTime = time.Now().Add(opts.Delay * 100)
 
-		h.logf("current thread number(%v) larger than TriggerAbs(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
+		h.logf("current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
 		time.AfterFunc(opts.Delay, func() {
 			h.startShrinkThread()
 		})
