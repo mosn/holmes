@@ -13,7 +13,8 @@ jobs:
         uses: actions/checkout@v2
       - name: golangci-lint
         uses: reviewdog/action-golangci-lint@v1
-        run: make lint
+        with:
+          golangci_lint_flags: --timeout=10m --tests=false --skip-dirs=example
 
   test:
     name: Test
