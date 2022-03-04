@@ -271,7 +271,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	coolDown := h.opts.CoolDown
 	grOpts := h.opts.GetGrOpts()
 
-	if grOpts != nil || !grOpts.Enable {
+	if grOpts == nil || !grOpts.Enable {
 		return
 	}
 
@@ -306,7 +306,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	coolDown := h.opts.CoolDown
 	memOpts := h.opts.GetMemOpts()
 
-	if memOpts != nil || !memOpts.Enable {
+	if memOpts == nil || !memOpts.Enable {
 		return
 	}
 
@@ -341,7 +341,7 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 func (h *Holmes) threadCheckAndShrink(threadNum int) {
 	opts := h.opts.GetShrinkThreadOpts()
 
-	if opts != nil || !opts.Enable {
+	if opts == nil || !opts.Enable {
 		return
 	}
 
@@ -367,7 +367,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 
 	threadOpts := h.opts.GetThreadOpts()
 
-	if threadOpts != nil || !threadOpts.Enable {
+	if threadOpts == nil || !threadOpts.Enable {
 		return
 	}
 
@@ -443,7 +443,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 	cpuOpts := h.opts.GetCPUOpts()
 
-	if cpuOpts != nil || !cpuOpts.Enable {
+	if cpuOpts == nil || !cpuOpts.Enable {
 		return
 	}
 
@@ -508,7 +508,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	gcHeapOpts := h.opts.GetGcHeapOpts()
 
-	if gcHeapOpts != nil || !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
+	if gcHeapOpts == nil || !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
 		return
 	}
 
