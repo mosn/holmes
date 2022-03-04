@@ -14,7 +14,7 @@ jobs:
       - name: golangci-lint
         uses: reviewdog/action-golangci-lint@v1
         with:
-          golangci_lint_flags: "--enable-all --timeout=10m --exclude-use-default=false --tests=false --skip-dirs=example --disable=gochecknoinits,gochecknoglobals,exhaustive,nakedret,exhaustivestruct,lll,godox,wrapcheck,godot,wsl,gomnd"
+          golangci_lint_flags: --timeout=10m --tests=false --skip-dirs=example
 
   test:
     name: Test

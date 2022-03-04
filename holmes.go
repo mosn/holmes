@@ -55,6 +55,7 @@ type Holmes struct {
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
 		opts:    newOptions(),
+		finCh:   make(chan struct{}, 1),
 		stopped: 1, // Initialization should be off
 	}
 
@@ -109,16 +110,15 @@ func (h *Holmes) EnableMemDump() *Holmes {
 	return h
 }
 
-// EnableGCHeapDump enables the GC heap dump.
-func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.gCHeapOpts.Enable = true
-	h.finCh = make(chan struct{})
-	return h
-}
-
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
 	h.opts.gCHeapOpts.Enable = false
+	return h
+}
+
+// EnableGCHeapDump enables the GC heap dump.
+func (h *Holmes) EnableGCHeapDump() *Holmes {
+	h.opts.gCHeapOpts.Enable = true
 	return h
 }
 
@@ -334,7 +334,7 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
-	h.writeProfileDataToFile(buf, c, mem, rss, h.memStats)
+	h.writeProfileDataToFile(buf, c, mem, rss, h.memStats, "")
 	return true
 }
 
@@ -420,11 +420,16 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 		return false
 	}
 
-	var buf bytes.Buffer
-	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType))    // nolint: errcheck
+	eventID := fmt.Sprintf("thr-%d", h.threadTriggerCount)
 
-	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats)
+	var buf bytes.Buffer
+
+	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats, eventID)
+
+	buf.Reset()
+	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
+	h.writeProfileDataToFile(buf, c, goroutine, curThreadNum, h.threadStats, eventID)
 
 	return true
 }
@@ -463,7 +468,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		return false
 	}
 
-	binFileName := getBinaryFileName(h.opts.DumpPath, cpu)
+	binFileName := getBinaryFileName(h.opts.DumpPath, cpu, "")
 
 	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
 	if err != nil {
@@ -593,9 +598,12 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 		return false
 	}
 
+	// gcTriggerCount only increased after got both two profiles
+	eventID := fmt.Sprintf("heap-%d", h.grTriggerCount)
+
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, c, gcHeap, gc, h.gcHeapStats)
+	h.writeProfileDataToFile(buf, c, gcHeap, gc, h.gcHeapStats, eventID)
 
 	return true
 }
@@ -606,17 +614,17 @@ func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts grOptions, dum
 		opts.GoroutineTriggerNumMax,
 		h.grNumStats.data, currentStat)
 
-	if err := writeFile(data, dumpType, h.opts.DumpOptions); err != nil {
+	if err := writeFile(data, dumpType, h.opts.DumpOptions, ""); err != nil {
 		h.logf("%s", err.Error())
 	}
 }
 
-func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dumpType configureType, currentStat int, ringStats ring) {
+func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dumpType configureType, currentStat int, ringStats ring, eventID string) {
 	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
 		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
 		NotSupportTypeMaxConfig, ringStats, currentStat)
 
-	if err := writeFile(data, dumpType, h.opts.DumpOptions); err != nil {
+	if err := writeFile(data, dumpType, h.opts.DumpOptions, eventID); err != nil {
 		h.logf("%s", err.Error())
 	}
 }
