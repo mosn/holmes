@@ -163,13 +163,13 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bo
 	return curVal >= avg*(100+ruleDiff)/100
 }
 
-func getBinaryFileName(filePath string, dumpType configureType) string {
+func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
 	binarySuffix := time.Now().Format("20060102150405.000") + ".bin"
 
-	return path.Join(filePath, type2name[dumpType]+"."+binarySuffix)
+	return path.Join(filePath, type2name[dumpType]+"."+eventID+"."+binarySuffix)
 }
 
-func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions) error {
+func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) error {
 	if dumpOpts.DumpProfileType == textDump {
 		// write to log
 		if dumpOpts.DumpFullStack {
@@ -179,7 +179,7 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions)
 		return fmt.Errorf(data.String())
 	}
 
-	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType)
+	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType, eventID)
 
 	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
 	if err != nil {
