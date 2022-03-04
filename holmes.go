@@ -51,6 +51,10 @@ type Holmes struct {
 	stopped int64
 }
 
+type ProfileReporter interface {
+	Report(ptype string, buf []byte, reason string, eventID string) error
+}
+
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
