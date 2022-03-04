@@ -479,7 +479,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		h.logf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false
 	}
-	defer bf.Close()
+	defer bf.Close() // nolint: errcheck
 
 	err = pprof.StartCPUProfile(bf)
 	if err != nil {

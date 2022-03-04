@@ -34,12 +34,14 @@ func (r *HttpReporter) Report(ptype string, buf []byte, reason string, eventID s
 	if err != nil {
 		return fmt.Errorf("create form File err: %v", err)
 	}
-	part.Write(buf)
-	writer.WriteField("token", r.token)
-	writer.WriteField("profile_type", ptype)
-	writer.WriteField("event_id", eventID)
-	writer.WriteField("comment", reason)
-	writer.Close()
+	if _, err := part.Write(buf); err != nil {
+		return fmt.Errorf("write buf to file part err: %v", err)
+	}
+	writer.WriteField("token", r.token)      // nolint: errcheck
+	writer.WriteField("profile_type", ptype) // nolint: errcheck
+	writer.WriteField("event_id", eventID)   // nolint: errcheck
+	writer.WriteField("comment", reason)     // nolint: errcheck
+	writer.Close()                           // nolint: errcheck
 	request, err := http.NewRequest("POST", r.url, body)
 	if err != nil {
 		return fmt.Errorf("NewRequest err: %v", err)
@@ -51,7 +53,7 @@ func (r *HttpReporter) Report(ptype string, buf []byte, reason string, eventID s
 	if err != nil {
 		return fmt.Errorf("do Request err: %v", err)
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() // nolint: errcheck
 
 	respContent, err := ioutil.ReadAll(response.Body)
 	if err != nil {
