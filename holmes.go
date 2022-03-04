@@ -55,6 +55,7 @@ type Holmes struct {
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
 		opts:    newOptions(),
+		finCh:   make(chan struct{}, 1),
 		stopped: 1, // Initialization should be off
 	}
 
@@ -109,16 +110,15 @@ func (h *Holmes) EnableMemDump() *Holmes {
 	return h
 }
 
-// EnableGCHeapDump enables the GC heap dump.
-func (h *Holmes) EnableGCHeapDump() *Holmes {
-	h.opts.gCHeapOpts.Enable = true
-	h.finCh = make(chan struct{})
-	return h
-}
-
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
 	h.opts.gCHeapOpts.Enable = false
+	return h
+}
+
+// EnableGCHeapDump enables the GC heap dump.
+func (h *Holmes) EnableGCHeapDump() *Holmes {
+	h.opts.gCHeapOpts.Enable = true
 	return h
 }
 
