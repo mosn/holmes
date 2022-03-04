@@ -55,7 +55,7 @@ type Holmes struct {
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
 		opts:    newOptions(),
-		finCh:   make(chan struct{}, 1),
+		finCh:   make(chan struct{}),
 		stopped: 1, // Initialization should be off
 	}
 
@@ -271,7 +271,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	coolDown := h.opts.CoolDown
 	grOpts := h.opts.GetGrOpts()
 
-	if !grOpts.Enable {
+	if grOpts != nil || !grOpts.Enable {
 		return
 	}
 
@@ -280,7 +280,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 	// grOpts is a struct, no escape.
-	if triggered := h.goroutineProfile(gNum, grOpts); triggered {
+	if triggered := h.goroutineProfile(gNum, *grOpts); triggered {
 		h.grCoolDownTime = time.Now().Add(coolDown)
 		h.grTriggerCount++
 	}
@@ -306,7 +306,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	coolDown := h.opts.CoolDown
 	memOpts := h.opts.GetMemOpts()
 
-	if !memOpts.Enable {
+	if memOpts != nil || !memOpts.Enable {
 		return
 	}
 
@@ -315,7 +315,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 		return
 	}
 	// memOpts is a struct, no escape.
-	if triggered := h.memProfile(mem, memOpts); triggered {
+	if triggered := h.memProfile(mem, *memOpts); triggered {
 		h.memCoolDownTime = time.Now().Add(coolDown)
 		h.memTriggerCount++
 	}
@@ -341,7 +341,7 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 func (h *Holmes) threadCheckAndShrink(threadNum int) {
 	opts := h.opts.GetShrinkThreadOpts()
 
-	if !opts.Enable {
+	if opts != nil || !opts.Enable {
 		return
 	}
 
@@ -355,7 +355,7 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 
 		h.logf("current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
 		time.AfterFunc(opts.Delay, func() {
-			h.startShrinkThread()
+			h.startShrinkThread(opts)
 		})
 	}
 }
@@ -367,7 +367,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 
 	threadOpts := h.opts.GetThreadOpts()
 
-	if !threadOpts.Enable {
+	if threadOpts != nil || !threadOpts.Enable {
 		return
 	}
 
@@ -376,15 +376,15 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 		return
 	}
 	// threadOpts is a struct, no escape.
-	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
+	if triggered := h.threadProfile(threadNum, *threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
 	}
 }
 
 // TODO: better only shrink the threads that are idle.
-func (h *Holmes) startShrinkThread() {
-	opts := h.opts.GetShrinkThreadOpts()
+func (h *Holmes) startShrinkThread(opts *ShrinkThrOptions) {
+
 	curThreadNum := getThreadNum()
 	n := curThreadNum - opts.Threshold
 
@@ -443,7 +443,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 
 	cpuOpts := h.opts.GetCPUOpts()
 
-	if !cpuOpts.Enable {
+	if cpuOpts != nil || !cpuOpts.Enable {
 		return
 	}
 
@@ -452,7 +452,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 		return
 	}
 	// cpuOpts is a struct, no escape.
-	if triggered := h.cpuProfile(cpu, cpuOpts); triggered {
+	if triggered := h.cpuProfile(cpu, *cpuOpts); triggered {
 		h.cpuCoolDownTime = time.Now().Add(coolDown)
 		h.cpuTriggerCount++
 	}
@@ -508,7 +508,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	gcHeapOpts := h.opts.GetGcHeapOpts()
 
-	if !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
+	if gcHeapOpts != nil || !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
 		return
 	}
 
@@ -543,7 +543,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 		return
 	}
 
-	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered, gcHeapOpts); triggered {
+	if triggered := h.gcHeapProfile(ratio, h.gcHeapTriggered, *gcHeapOpts); triggered {
 		if h.gcHeapTriggered {
 			// already dump twice, mark it false
 			h.gcHeapTriggered = false
