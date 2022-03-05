@@ -137,7 +137,7 @@ func collect(cpuCore float64, memoryLimit uint64) (int, int, int, int, error) {
 	// here we divide by core number, so we can set a percent bar more intuitively
 	cpuPercent := cpu / cpuCore
 
-	memPercent := float64(mem) / float64(memoryLimit)
+	memPercent := float64(mem) / float64(memoryLimit) * 100
 
 	return int(cpuPercent), int(memPercent), gNum, tNum, nil
 }
