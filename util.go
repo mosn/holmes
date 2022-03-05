@@ -142,25 +142,28 @@ func collect(cpuCore float64, memoryLimit uint64) (int, int, int, int, error) {
 	return int(cpuPercent), int(memPercent), gNum, tNum, nil
 }
 
-func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) bool {
+func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (bool, string) {
 	// should bigger than rule min
 	if curVal < ruleMin {
-		return false
+		return false, fmt.Sprintf("curVal [%d]< ruleMin [%d]", curVal, ruleMin)
 	}
 
 	// if ruleMax is enable and current value bigger max, skip dumping
 	if ruleMax != NotSupportTypeMaxConfig && curVal >= ruleMax {
-		return false
+		return false, ""
 	}
 
 	// the current peak load exceed the absolute value
 	if curVal > ruleAbs {
-		return true
+		return true, fmt.Sprintf("curVal [%d] > ruleAbs [%d]", curVal, ruleAbs)
 	}
 
 	// the peak load matches the rule
 	avg := history.avg()
-	return curVal >= avg*(100+ruleDiff)/100
+	if curVal >= avg*(100+ruleDiff)/100 {
+		return true, fmt.Sprintf("curVal[%d] >= avg[%d]*(100+ruleDiff)/100", curVal, avg)
+	}
+	return false, ""
 }
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
@@ -191,4 +194,20 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions,
 		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
 	}
 	return nil
+}
+
+func WrapRecoverGoRoutine(f func()) {
+	go func() {
+		defer func() {
+			if x := recover(); x != nil {
+				panicReason := fmt.Sprintf("I'm panic because of: %v\n", x)
+				fmt.Println(panicReason)
+				stk := make([]byte, 10240)
+				stkLen := runtime.Stack(stk, false)
+				fmt.Printf("%s\n", string(stk[:stkLen]))
+			}
+		}()
+
+		f()
+	}()
 }

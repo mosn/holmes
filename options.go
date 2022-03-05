@@ -1,6 +1,7 @@
 package holmes
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -55,6 +56,15 @@ type options struct {
 	gCHeapOpts *typeOption
 	cpuOpts    *typeOption
 	threadOpts *typeOption
+
+	pReportOpts *ReporterOptions
+}
+
+type ReporterOptions struct {
+	reporter ProfileReporter
+	active   int32 // switch
+	eventsCh chan func()
+	cancelCh chan struct{}
 }
 
 // DumpOptions contains configuration about dump file.
@@ -153,6 +163,10 @@ func newOptions() *options {
 			Enable: false,
 		},
 		L: &sync.RWMutex{},
+		pReportOpts: &ReporterOptions{
+			eventsCh: make(chan func(), 4),
+			cancelCh: make(chan struct{}, 1),
+		},
 	}
 	o.Logger.Store(os.Stdout)
 	return o
@@ -447,6 +461,35 @@ func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
 			opts.ShrinkThrOptions.Threshold = threshold
 		}
 		opts.ShrinkThrOptions.Delay = delay
+		return
+	})
+}
+
+// WithProfileReporter will enable reporter
+func WithProfileReporter(r ProfileReporter) Option {
+	return optionFunc(func(opts *options) (err error) {
+		if r == nil {
+			return nil
+		}
+
+		opts.pReportOpts.reporter = r
+		// active a background goroutine to consume profile report event.
+		if atomic.LoadInt32(&opts.pReportOpts.active) != 1 {
+
+			atomic.StoreInt32(&opts.pReportOpts.active, 1)
+			go func(cancel <-chan struct{}, evt <-chan func()) {
+				for {
+					select {
+					case <-cancel:
+						fmt.Println("exit profile reporter background goroutine")
+						return
+					case f := <-evt:
+						WrapRecoverGoRoutine(f)
+						time.Sleep(200 * time.Millisecond)
+					}
+				}
+			}(opts.pReportOpts.cancelCh, opts.pReportOpts.eventsCh)
+		}
 		return
 	})
 }
