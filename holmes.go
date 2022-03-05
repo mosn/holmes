@@ -51,6 +51,10 @@ type Holmes struct {
 	stopped int64
 }
 
+type ProfileReporter interface {
+	Report(ptype string, buf []byte, reason string, eventID string) error
+}
+
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
@@ -475,7 +479,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		h.logf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false
 	}
-	defer bf.Close()
+	defer bf.Close() // nolint: errcheck
 
 	err = pprof.StartCPUProfile(bf)
 	if err != nil {
