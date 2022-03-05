@@ -719,8 +719,7 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 		return
 	}
 	f := func() {
-		h.opts.pReportOpts.reporter.Report(pType, buf, reason, eventID)
+		h.opts.pReportOpts.reporter.Report(pType, buf, reason, eventID) // nolint: errcheck
 	}
 	h.opts.pReportOpts.eventsCh <- f
-	return
 }
