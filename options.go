@@ -76,49 +76,49 @@ type ShrinkThrOptions struct {
 }
 
 // GetShrinkThreadOpts return a copy of ShrinkThrOptions.
-func (o *options) GetShrinkThreadOpts() *ShrinkThrOptions {
+func (o *options) GetShrinkThreadOpts() ShrinkThrOptions {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.ShrinkThrOptions
+	return *o.ShrinkThrOptions
 }
 
 // GetMemOpts return a copy of typeOption.
-func (o *options) GetMemOpts() *typeOption {
+func (o *options) GetMemOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.memOpts
+	return *o.memOpts
 }
 
 // GetCPUOpts return a copy of typeOption
 // if cpuOpts not exist return a empty typeOption and false.
-func (o *options) GetCPUOpts() *typeOption {
+func (o *options) GetCPUOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.cpuOpts
+	return *o.cpuOpts
 }
 
 // GetGrOpts return a copy of grOptions
 // if grOpts not exist return a empty grOptions and false.
-func (o *options) GetGrOpts() *grOptions {
+func (o *options) GetGrOpts() grOptions {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.grOpts
+	return *o.grOpts
 }
 
 // GetThreadOpts return a copy of typeOption
 // if threadOpts not exist return a empty typeOption and false.
-func (o *options) GetThreadOpts() *typeOption {
+func (o *options) GetThreadOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.threadOpts
+	return *o.threadOpts
 }
 
 // GetGcHeapOpts return a copy of typeOption
 // if gCHeapOpts not exist return a empty typeOption and false.
-func (o *options) GetGcHeapOpts() *typeOption {
+func (o *options) GetGcHeapOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return o.gCHeapOpts
+	return *o.gCHeapOpts
 }
 
 // Option holmes option type.
