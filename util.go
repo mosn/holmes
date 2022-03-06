@@ -196,15 +196,14 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions,
 	return nil
 }
 
-func WrapRecoverGoRoutine(f func()) {
-	go func() {
+func WrapRecover(logf logfTyp, f func()) {
+	func() {
 		defer func() {
 			if x := recover(); x != nil {
-				panicReason := fmt.Sprintf("I'm panic because of: %v\n", x)
-				fmt.Println(panicReason)
+				logf("I'm panic because of: %v\n", x)
 				stk := make([]byte, 10240)
 				stkLen := runtime.Stack(stk, false)
-				fmt.Printf("%s\n", string(stk[:stkLen]))
+				logf("%s\n", string(stk[:stkLen]))
 			}
 		}()
 

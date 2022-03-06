@@ -24,7 +24,8 @@ type options struct {
 
 	*DumpOptions
 
-	LogLevel int
+	LogLevel  int
+	changelog int32
 	// Logger *os.File
 	Logger atomic.Value
 
@@ -60,10 +61,13 @@ type options struct {
 	pReportOpts *ReporterOptions
 }
 
+// rptEvent stands of report event
+type rptEvent func()
+
 type ReporterOptions struct {
 	reporter ProfileReporter
 	active   int32 // switch
-	eventsCh chan func()
+	eventsCh chan rptEvent
 	cancelCh chan struct{}
 }
 
@@ -164,7 +168,7 @@ func newOptions() *options {
 		},
 		L: &sync.RWMutex{},
 		pReportOpts: &ReporterOptions{
-			eventsCh: make(chan func(), 4),
+			eventsCh: make(chan rptEvent, 32),
 			cancelCh: make(chan struct{}, 1),
 		},
 	}
@@ -466,6 +470,7 @@ func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
 }
 
 // WithProfileReporter will enable reporter
+// reopens profile reporter through WithProfileReporter(h.opts.pReportOpts.reporter)
 func WithProfileReporter(r ProfileReporter) Option {
 	return optionFunc(func(opts *options) (err error) {
 		if r == nil {
@@ -477,15 +482,14 @@ func WithProfileReporter(r ProfileReporter) Option {
 		if atomic.LoadInt32(&opts.pReportOpts.active) != 1 {
 
 			atomic.StoreInt32(&opts.pReportOpts.active, 1)
-			go func(cancel <-chan struct{}, evt <-chan func()) {
+			go func(cancel <-chan struct{}, evt <-chan rptEvent) {
 				for {
 					select {
 					case <-cancel:
 						fmt.Println("exit profile reporter background goroutine")
 						return
 					case f := <-evt:
-						WrapRecoverGoRoutine(f)
-						time.Sleep(200 * time.Millisecond)
+						WrapRecover(opts.logf, f)
 					}
 				}
 			}(opts.pReportOpts.cancelCh, opts.pReportOpts.eventsCh)

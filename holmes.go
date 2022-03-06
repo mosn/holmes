@@ -17,7 +17,6 @@ type Holmes struct {
 	opts *options
 
 	// stats
-	changelog                int32
 	collectCount             int
 	gcCycleCount             int
 	threadTriggerCount       int
@@ -704,14 +703,6 @@ func (h *Holmes) Set(opts ...Option) error {
 func (h *Holmes) DisableProfileReporter() {
 	atomic.StoreInt32(&h.opts.pReportOpts.active, 0)
 	h.opts.pReportOpts.cancelCh <- struct{}{}
-}
-
-func (h *Holmes) EnableProfileReporter() (err error) {
-	if h.opts.pReportOpts == nil {
-		return fmt.Errorf("MUST initial profile repoter before enable it")
-	}
-	atomic.StoreInt32(&h.opts.pReportOpts.active, 1)
-	return nil
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {

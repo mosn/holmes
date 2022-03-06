@@ -58,7 +58,7 @@ func TestReporter(t *testing.T) {
 		log.Fatalf("fail to set opts on running time.")
 	}
 	go cpuex()
-	time.Sleep(100 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	if grReportCount == 0 {
 		log.Fatalf("not grReport")
