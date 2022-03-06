@@ -181,11 +181,6 @@ func (h *Holmes) Start() {
 // Stop the dump loop.
 func (h *Holmes) Stop() {
 	atomic.StoreInt64(&h.stopped, 1)
-
-	// cancel report background goroutine
-	if h.opts.pReportOpts.active == 1 {
-		h.opts.pReportOpts.cancelCh <- struct{}{}
-	}
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -702,7 +697,6 @@ func (h *Holmes) Set(opts ...Option) error {
 
 func (h *Holmes) DisableProfileReporter() {
 	atomic.StoreInt32(&h.opts.pReportOpts.active, 0)
-	h.opts.pReportOpts.cancelCh <- struct{}{}
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {

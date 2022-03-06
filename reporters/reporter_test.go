@@ -62,7 +62,7 @@ func TestReporter(t *testing.T) {
 
 	if grReportCount == 0 {
 		log.Fatalf("not grReport")
-	}
+	}a
 
 	if cpuReportCount == 0 {
 		log.Fatalf("not cpuReport")

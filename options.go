@@ -1,7 +1,6 @@
 package holmes
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -68,7 +67,6 @@ type ReporterOptions struct {
 	reporter ProfileReporter
 	active   int32 // switch
 	eventsCh chan rptEvent
-	cancelCh chan struct{}
 }
 
 // DumpOptions contains configuration about dump file.
@@ -169,7 +167,6 @@ func newOptions() *options {
 		L: &sync.RWMutex{},
 		pReportOpts: &ReporterOptions{
 			eventsCh: make(chan rptEvent, 32),
-			cancelCh: make(chan struct{}, 1),
 		},
 	}
 	o.Logger.Store(os.Stdout)
@@ -482,17 +479,12 @@ func WithProfileReporter(r ProfileReporter) Option {
 		if atomic.LoadInt32(&opts.pReportOpts.active) != 1 {
 
 			atomic.StoreInt32(&opts.pReportOpts.active, 1)
-			go func(cancel <-chan struct{}, evt <-chan rptEvent) {
+			go func(evt <-chan rptEvent) {
 				for {
-					select {
-					case <-cancel:
-						fmt.Println("exit profile reporter background goroutine")
-						return
-					case f := <-evt:
-						WrapRecover(opts.logf, f)
-					}
+					f := <-evt
+					WrapRecover(opts.logf, f)
 				}
-			}(opts.pReportOpts.cancelCh, opts.pReportOpts.eventsCh)
+			}(opts.pReportOpts.eventsCh)
 		}
 		return
 	})
