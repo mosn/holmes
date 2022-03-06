@@ -115,6 +115,7 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 	}
 }
 
+//nolint
 // log write content to log file.
 func (h *Holmes) warnf(pattern string, args ...interface{}) {
 	if h.opts.LogLevel.Allow(LogLevelWarn) {
@@ -122,6 +123,7 @@ func (h *Holmes) warnf(pattern string, args ...interface{}) {
 	}
 }
 
+//nolint
 // log write content to log file.
 func (h *Holmes) errorf(pattern string, args ...interface{}) {
 	if h.opts.LogLevel.Allow(LogLevelError) {
