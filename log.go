@@ -115,18 +115,18 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 	}
 }
 
-//nolint
-// log write content to log file.
-func (h *Holmes) warnf(pattern string, args ...interface{}) {
-	if h.opts.LogLevel.Allow(LogLevelWarn) {
-		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
-	}
-}
-
-//nolint
-// log write content to log file.
-func (h *Holmes) errorf(pattern string, args ...interface{}) {
-	if h.opts.LogLevel.Allow(LogLevelError) {
-		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
-	}
-}
+////nolint
+//// log write content to log file.
+//func (h *Holmes) warnf(pattern string, args ...interface{}) {
+//	if h.opts.LogLevel.Allow(LogLevelWarn) {
+//		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
+//	}
+//}
+//
+////nolint
+//// log write content to log file.
+//func (h *Holmes) errorf(pattern string, args ...interface{}) {
+//	if h.opts.LogLevel.Allow(LogLevelError) {
+//		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
+//	}
+//}

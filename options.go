@@ -433,6 +433,13 @@ func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, logi
 			return nil
 		}
 	}
+
+	if err != nil {
+		//nolint
+		fmt.Println("unexpected err", err)
+		return nil
+	}
+
 	f.logger.Store(logger)
 	return f
 }
