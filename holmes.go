@@ -356,7 +356,7 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 
 		h.logf("current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
 		time.AfterFunc(opts.Delay, func() {
-			h.startShrinkThread(opts)
+			h.startShrinkThread()
 		})
 	}
 }
@@ -384,9 +384,11 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 }
 
 // TODO: better only shrink the threads that are idle.
-func (h *Holmes) startShrinkThread(opts ShrinkThrOptions) {
+func (h *Holmes) startShrinkThread() {
 
 	curThreadNum := getThreadNum()
+	opts := h.opts.GetShrinkThreadOpts()
+
 	n := curThreadNum - opts.Threshold
 
 	// check again after the timer triggered
