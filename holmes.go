@@ -131,6 +131,7 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
+		close(gc.h.finCh)
 		return
 	}
 
@@ -496,7 +497,11 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 func (h *Holmes) gcHeapCheckLoop() {
 	for {
 		// wait for the finalizer event
-		<-h.finCh
+		_, ok := <-h.finCh
+		if !ok {
+			// close finch?
+			return
+		}
 
 		h.gcHeapCheckAndDump()
 	}
