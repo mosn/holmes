@@ -83,7 +83,7 @@ func newReporterOpts() *ReporterOptions {
 	go func(eventsCh <-chan rptEvent) {
 		for {
 			evt := <-eventsCh
-			opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID)
+			opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 		}
 	}(opts.eventsCh)
 
