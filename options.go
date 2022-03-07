@@ -23,8 +23,7 @@ type options struct {
 
 	*DumpOptions
 
-	LogLevel  int
-	changelog int32
+	LogLevel int
 	// Logger *os.File
 	Logger atomic.Value
 
@@ -60,13 +59,35 @@ type options struct {
 	pReportOpts *ReporterOptions
 }
 
-// rptEvent stands of report event
-type rptEvent func()
+// rptEvent stands of the args of report event
+type rptEvent struct {
+	PType   string
+	Buf     []byte
+	Reason  string
+	EventID string
+}
 
 type ReporterOptions struct {
+	L        *sync.RWMutex
 	reporter ProfileReporter
 	active   int32 // switch
 	eventsCh chan rptEvent
+}
+
+// newReporterOpts starts a background goroutine to consume event channel
+func newReporterOpts() *ReporterOptions {
+	opts := &ReporterOptions{}
+	opts.eventsCh = make(chan rptEvent, 32)
+	opts.L = &sync.RWMutex{}
+
+	go func(eventsCh <-chan rptEvent) {
+		for {
+			evt := <-eventsCh
+			opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID)
+		}
+	}(opts.eventsCh)
+
+	return opts
 }
 
 // DumpOptions contains configuration about dump file.
@@ -85,6 +106,13 @@ type ShrinkThrOptions struct {
 	Enable    bool
 	Threshold int
 	Delay     time.Duration // start to shrink thread after the delay time.
+}
+
+// GetReporterOpts returns a copy of pReportOpts.
+func (o *options) GetReporterOpts() ReporterOptions {
+	o.pReportOpts.L.RLock()
+	defer o.pReportOpts.L.RUnlock()
+	return *o.pReportOpts
 }
 
 // GetShrinkThreadOpts return a copy of ShrinkThrOptions.
@@ -164,10 +192,8 @@ func newOptions() *options {
 		ShrinkThrOptions: &ShrinkThrOptions{
 			Enable: false,
 		},
-		L: &sync.RWMutex{},
-		pReportOpts: &ReporterOptions{
-			eventsCh: make(chan rptEvent, 32),
-		},
+		L:           &sync.RWMutex{},
+		pReportOpts: newReporterOpts(),
 	}
 	o.Logger.Store(os.Stdout)
 	return o
@@ -473,19 +499,11 @@ func WithProfileReporter(r ProfileReporter) Option {
 		if r == nil {
 			return nil
 		}
+		opts.pReportOpts.L.Lock()
+		defer opts.pReportOpts.L.Unlock()
 
 		opts.pReportOpts.reporter = r
-		// active a background goroutine to consume profile report event.
-		if atomic.LoadInt32(&opts.pReportOpts.active) != 1 {
-
-			atomic.StoreInt32(&opts.pReportOpts.active, 1)
-			go func(evt <-chan rptEvent) {
-				for {
-					f := <-evt
-					WrapRecover(opts.logf, f)
-				}
-			}(opts.pReportOpts.eventsCh)
-		}
+		atomic.StoreInt32(&opts.pReportOpts.active, 1)
 		return
 	})
 }

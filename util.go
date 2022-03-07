@@ -195,18 +195,3 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions,
 	}
 	return nil
 }
-
-func WrapRecover(logf logfTyp, f func()) {
-	func() {
-		defer func() {
-			if x := recover(); x != nil {
-				logf("I'm panic because of: %v\n", x)
-				stk := make([]byte, 10240)
-				stkLen := runtime.Stack(stk, false)
-				logf("%s\n", string(stk[:stkLen]))
-			}
-		}()
-
-		f()
-	}()
-}

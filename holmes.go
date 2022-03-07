@@ -17,6 +17,7 @@ type Holmes struct {
 	opts *options
 
 	// stats
+	changelog                int32
 	collectCount             int
 	gcCycleCount             int
 	threadTriggerCount       int
@@ -441,12 +442,13 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats, eventID)
 
+	h.ReportProfile(pType+"threadcreate", buf.Bytes(), reason, eventID)
+
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, goroutine, curThreadNum, h.threadStats, eventID)
 
-	// reason is ?
-	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
+	h.ReportProfile(pType+"goroutine", buf.Bytes(), reason, eventID)
 
 	return true
 }
@@ -509,7 +511,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
-	if h.opts.pReportOpts.active == 1 {
+	if h.opts.GetReporterOpts().active == 1 {
 		bfCpy, err := ioutil.ReadFile(binFileName)
 		if err != nil {
 			h.logf("fail to build copy of bf, err %v", err)
@@ -696,15 +698,14 @@ func (h *Holmes) Set(opts ...Option) error {
 }
 
 func (h *Holmes) DisableProfileReporter() {
+	h.opts.pReportOpts.L.Lock()
+	defer h.opts.pReportOpts.L.Unlock()
 	atomic.StoreInt32(&h.opts.pReportOpts.active, 0)
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
-	if h.opts.pReportOpts.active == 0 {
+	if h.opts.GetReporterOpts().active == 0 {
 		return
 	}
-	f := func() {
-		h.opts.pReportOpts.reporter.Report(pType, buf, reason, eventID) // nolint: errcheck
-	}
-	h.opts.pReportOpts.eventsCh <- f
+	h.opts.pReportOpts.eventsCh <- rptEvent{pType, buf, reason, eventID}
 }
