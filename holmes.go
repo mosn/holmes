@@ -442,13 +442,13 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats, eventID)
 
-	h.ReportProfile(pType+"threadcreate", buf.Bytes(), reason, eventID)
+	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
 
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, goroutine, curThreadNum, h.threadStats, eventID)
 
-	h.ReportProfile(pType+"goroutine", buf.Bytes(), reason, eventID)
+	h.ReportProfile("goroutine", buf.Bytes(), reason, eventID)
 
 	return true
 }
