@@ -739,7 +739,7 @@ func (h *Holmes) startReporter() {
 					// drop the message?
 					continue
 				}
-				reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) //
+				reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 			}
 		}
 	}(opts.cancelCh, opts.eventsCh, opts.changeCh)
