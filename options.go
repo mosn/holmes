@@ -56,7 +56,8 @@ type options struct {
 	cpuOpts    *typeOption
 	threadOpts *typeOption
 
-	pReportOpts *ReporterOptions
+	// profile reporter
+	rptOpts *ReporterOptions
 }
 
 // rptEvent stands of the args of report event
@@ -70,15 +71,11 @@ type rptEvent struct {
 type ReporterOptions struct {
 	reporter ProfileReporter
 	active   int32 // switch
-	eventsCh chan rptEvent
-	cancelCh chan struct{}
 }
 
 // newReporterOpts returns  ReporterOptions。
 func newReporterOpts() *ReporterOptions {
 	opts := &ReporterOptions{}
-	opts.eventsCh = make(chan rptEvent, 32)
-	opts.cancelCh = make(chan struct{}, 1)
 
 	return opts
 }
@@ -101,11 +98,11 @@ type ShrinkThrOptions struct {
 	Delay     time.Duration // start to shrink thread after the delay time.
 }
 
-// GetReporterOpts returns a copy of pReportOpts.
+// GetReporterOpts returns a copy of rptOpts.
 func (o *options) GetReporterOpts() ReporterOptions {
 	o.L.RLock()
 	defer o.L.RUnlock()
-	return *o.pReportOpts
+	return *o.rptOpts
 }
 
 // GetShrinkThreadOpts return a copy of ShrinkThrOptions.
@@ -185,8 +182,8 @@ func newOptions() *options {
 		ShrinkThrOptions: &ShrinkThrOptions{
 			Enable: false,
 		},
-		L:           &sync.RWMutex{},
-		pReportOpts: newReporterOpts(),
+		L:       &sync.RWMutex{},
+		rptOpts: newReporterOpts(),
 	}
 	o.Logger.Store(os.Stdout)
 	return o
@@ -486,15 +483,15 @@ func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
 }
 
 // WithProfileReporter will enable reporter
-// reopens profile reporter through WithProfileReporter(h.opts.pReportOpts.reporter)
+// reopens profile reporter through WithProfileReporter(h.opts.rptOpts.reporter)
 func WithProfileReporter(r ProfileReporter) Option {
 	return optionFunc(func(opts *options) (err error) {
 		if r == nil {
 			return nil
 		}
 
-		opts.pReportOpts.reporter = r
-		atomic.StoreInt32(&opts.pReportOpts.active, 1)
+		opts.rptOpts.reporter = r
+		atomic.StoreInt32(&opts.rptOpts.active, 1)
 		return
 	})
 }

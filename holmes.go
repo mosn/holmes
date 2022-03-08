@@ -50,6 +50,10 @@ type Holmes struct {
 
 	// switch
 	stopped int64
+
+	// profiler reporter channels
+	rptEventsCh chan rptEvent
+	rptCancelCh chan struct{}
 }
 
 type ProfileReporter interface {
@@ -59,9 +63,11 @@ type ProfileReporter interface {
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
-		opts:    newOptions(),
-		finCh:   make(chan struct{}, 1),
-		stopped: 1, // Initialization should be off
+		opts:        newOptions(),
+		finCh:       make(chan struct{}, 1),
+		stopped:     1, // Initialization should be off
+		rptEventsCh: make(chan rptEvent, 32),
+		rptCancelCh: make(chan struct{}, 1),
 	}
 
 	for _, opt := range opts {
@@ -513,7 +519,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
-	if h.opts.GetReporterOpts().active == 1 {
+	if opts := h.opts.GetReporterOpts(); opts.active == 1 {
 		bfCpy, err := ioutil.ReadFile(binFileName)
 		if err != nil {
 			h.logf("fail to build copy of bf, err %v", err)
@@ -700,7 +706,7 @@ func (h *Holmes) Set(opts ...Option) error {
 }
 
 func (h *Holmes) DisableProfileReporter() {
-	atomic.StoreInt32(&h.opts.pReportOpts.active, 0)
+	atomic.StoreInt32(&h.opts.rptOpts.active, 0)
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
@@ -708,7 +714,7 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 	if opts.active == 0 {
 		return
 	}
-	h.opts.pReportOpts.eventsCh <- rptEvent{
+	h.rptEventsCh <- rptEvent{
 		pType,
 		buf,
 		reason,
@@ -718,28 +724,31 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
-	opts := h.opts.GetReporterOpts()
-	go func(cancelCh <-chan struct{}, eventsCh <-chan rptEvent) {
+	go func() {
 		for {
 			select {
-			case <-opts.cancelCh:
+			case <-h.rptCancelCh:
 				h.logf("stop reporter background goroutine")
 				return
 			default:
-				evt := <-eventsCh
+				evt := <-h.rptEventsCh
 				opts := h.opts.GetReporterOpts()
 				if opts.reporter == nil {
 					h.logf("reporter is nil, please initial it before startReporter")
 					// drop the event
 					continue
 				}
+
+				if opts.active == 0 {
+					//drop the event
+					continue
+				}
 				opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 			}
 		}
-	}(opts.cancelCh, opts.eventsCh)
+	}()
 }
 
 func (h *Holmes) stopReporter() {
-	opts := h.opts.GetReporterOpts()
-	opts.cancelCh <- struct{}{}
+	h.rptCancelCh <- struct{}{}
 }
