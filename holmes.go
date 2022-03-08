@@ -720,16 +720,16 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 func (h *Holmes) startReporter() {
 	// opts.reporter is nil for now because we haven't call WithProfileReporter to initial it yet.
 	opts := h.opts.GetReporterOpts()
-	go func(cancelCh <-chan struct{}, eventsCh <-chan rptEvent, changeReporter <-chan ProfileReporter) {
+	go func(cancelCh <-chan struct{}, eventsCh <-chan rptEvent, changeReporterCh <-chan ProfileReporter) {
 		// waiting holmes initials the reporter
-		reporter := <-changeReporter
+		reporter := <-changeReporterCh
 
 		for {
 			select {
 			case <-opts.cancelCh:
 				h.logf("stop reporter background goroutine")
 				return
-			case new := <-changeReporter:
+			case new := <-changeReporterCh:
 				h.logf("change Reporter")
 				reporter = new
 			default:
