@@ -142,6 +142,7 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
+		close(gc.h.finCh)
 		return
 	}
 
@@ -405,8 +406,10 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 
 // TODO: better only shrink the threads that are idle.
 func (h *Holmes) startShrinkThread() {
-	opts := h.opts.GetShrinkThreadOpts()
+
 	curThreadNum := getThreadNum()
+	opts := h.opts.GetShrinkThreadOpts()
+
 	n := curThreadNum - opts.Threshold
 
 	// check again after the timer triggered
@@ -534,7 +537,11 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 func (h *Holmes) gcHeapCheckLoop() {
 	for {
 		// wait for the finalizer event
-		<-h.finCh
+		_, ok := <-h.finCh
+		if !ok {
+			// close finch?
+			return
+		}
 
 		h.gcHeapCheckAndDump()
 	}

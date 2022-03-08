@@ -112,14 +112,14 @@ func (o *options) GetShrinkThreadOpts() ShrinkThrOptions {
 	return *o.ShrinkThrOptions
 }
 
-// GetMemOpts return a copy of memOpts.
+// GetMemOpts return a copy of typeOption.
 func (o *options) GetMemOpts() typeOption {
 	o.L.RLock()
 	defer o.L.RUnlock()
 	return *o.memOpts
 }
 
-// GetCPUOpts return a copy of cpuOpts
+// GetCPUOpts return a copy of typeOption
 // if cpuOpts not exist return a empty typeOption and false.
 func (o *options) GetCPUOpts() typeOption {
 	o.L.RLock()
@@ -127,7 +127,7 @@ func (o *options) GetCPUOpts() typeOption {
 	return *o.cpuOpts
 }
 
-// GetGrOpts return a copy of memOpts
+// GetGrOpts return a copy of grOptions
 // if grOpts not exist return a empty grOptions and false.
 func (o *options) GetGrOpts() grOptions {
 	o.L.RLock()
@@ -135,7 +135,7 @@ func (o *options) GetGrOpts() grOptions {
 	return *o.grOpts
 }
 
-// GetThreadOpts return a copy of memOpts
+// GetThreadOpts return a copy of typeOption
 // if threadOpts not exist return a empty typeOption and false.
 func (o *options) GetThreadOpts() typeOption {
 	o.L.RLock()
@@ -143,7 +143,7 @@ func (o *options) GetThreadOpts() typeOption {
 	return *o.threadOpts
 }
 
-// GetGcHeapOpts return a copy of memOpts
+// GetGcHeapOpts return a copy of typeOption
 // if gCHeapOpts not exist return a empty typeOption and false.
 func (o *options) GetGcHeapOpts() typeOption {
 	o.L.RLock()
@@ -242,6 +242,10 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 			if err != nil {
 				return
 			}
+		}
+		old, ok := opts.Logger.Load().(*os.File)
+		if ok && logger != nil {
+			_ = old.Close()
 		}
 		opts.Logger.Store(logger)
 		return
