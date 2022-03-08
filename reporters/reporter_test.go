@@ -44,6 +44,21 @@ func (m *mockReporter) Report(pType string, buf []byte, reason string, eventID s
 	return nil
 }
 
+var grReopenReportCount int
+
+type mockReopenReporter struct {
+}
+
+func (m *mockReopenReporter) Report(pType string, buf []byte, reason string, eventID string) error {
+	log.Printf("call %s report \n", pType)
+
+	switch pType {
+	case "goroutine":
+		grReopenReportCount++
+	}
+	return nil
+}
+
 func TestReporter(t *testing.T) {
 	grReportCount = 0
 	cpuReportCount = 0
@@ -68,14 +83,17 @@ func TestReporter(t *testing.T) {
 		log.Fatalf("not cpuReport")
 	}
 
-	before := grReportCount
+	// test reopen feature
 	h.Stop()
 	h.Start()
+	grReopenReportCount = 0
+	h.Set(
+		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
 	time.Sleep(5 * time.Second)
 
-	if grReportCount == before {
+	if grReopenReportCount == 0 {
 		log.Fatalf("fail to reopen")
 	}
 }
