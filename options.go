@@ -68,24 +68,19 @@ type rptEvent struct {
 }
 
 type ReporterOptions struct {
-	L        *sync.RWMutex
 	reporter ProfileReporter
 	active   int32 // switch
 	eventsCh chan rptEvent
+	cancelCh chan struct{}
+	changeCh chan ProfileReporter
 }
 
-// newReporterOpts starts a background goroutine to consume event channel
+// newReporterOpts returns  ReporterOptions。
 func newReporterOpts() *ReporterOptions {
 	opts := &ReporterOptions{}
 	opts.eventsCh = make(chan rptEvent, 32)
-	opts.L = &sync.RWMutex{}
-
-	go func(eventsCh <-chan rptEvent) {
-		for {
-			evt := <-eventsCh
-			opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
-		}
-	}(opts.eventsCh)
+	opts.cancelCh = make(chan struct{}, 1)
+	opts.changeCh = make(chan ProfileReporter, 1)
 
 	return opts
 }
@@ -110,8 +105,8 @@ type ShrinkThrOptions struct {
 
 // GetReporterOpts returns a copy of pReportOpts.
 func (o *options) GetReporterOpts() ReporterOptions {
-	o.pReportOpts.L.RLock()
-	defer o.pReportOpts.L.RUnlock()
+	o.L.RLock()
+	defer o.L.RUnlock()
 	return *o.pReportOpts
 }
 
@@ -499,10 +494,9 @@ func WithProfileReporter(r ProfileReporter) Option {
 		if r == nil {
 			return nil
 		}
-		opts.pReportOpts.L.Lock()
-		defer opts.pReportOpts.L.Unlock()
 
 		opts.pReportOpts.reporter = r
+		opts.pReportOpts.changeCh <- r
 		atomic.StoreInt32(&opts.pReportOpts.active, 1)
 		return
 	})

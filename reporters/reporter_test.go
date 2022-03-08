@@ -68,6 +68,16 @@ func TestReporter(t *testing.T) {
 		log.Fatalf("not cpuReport")
 	}
 
+	before := grReportCount
+	h.Stop()
+	h.Start()
+	time.Sleep(10 * time.Second)
+
+	time.Sleep(5 * time.Second)
+
+	if grReportCount == before {
+		log.Fatalf("fail to reopen")
+	}
 }
 
 func cpuex() {
