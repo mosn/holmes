@@ -12,11 +12,14 @@ func init() {
 	go http.ListenAndServe(":10003", nil)
 }
 
+var h *holmes.Holmes
+
 func main() {
-	h, _ := holmes.New(
+	h, _ = holmes.New(
 		holmes.WithCollectInterval("2s"),
 		holmes.WithCoolDown("1m"),
-		holmes.WithLogger(holmes.NewFileLog("./tmp", false, "")),
+		holmes.WithLogger(holmes.NewFileLog("./tmp", true, "1000b")),
+		holmes.WithDumpPath("./tmd"),
 		holmes.WithTextDump(),
 		holmes.WithMemDump(3, 25, 80),
 	)
@@ -27,4 +30,5 @@ func main() {
 func make1gbslice(wr http.ResponseWriter, req *http.Request) {
 	var a = make([]byte, 1073741824)
 	_ = a
+
 }

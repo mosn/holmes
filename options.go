@@ -157,6 +157,45 @@ func newOptions() *options {
 	return o
 }
 
+// WithDumpPath set the dump path for holmes.
+func WithDumpPath(dumpPath string, loginfo ...string) Option {
+	return optionFunc(func(opts *options) (err error) {
+		f := path.Join(dumpPath, defaultLoggerName)
+		if len(loginfo) > 0 {
+			f = dumpPath + "/" + path.Join(loginfo...)
+		}
+		opts.DumpPath = filepath.Dir(f)
+		opts.defaultLoggerHandler(dumpPath, loginfo...)
+		return
+	})
+}
+
+func (o *options) defaultLoggerHandler(dumpPath string, loginfo ...string) {
+	if o.Logger == nil {
+		return
+	}
+	switch df := o.Logger.(type) {
+	case *fileLog:
+		old := df.logger.Load()
+		newLogger := NewFileLog(dumpPath, df.rotateEnable, df.splitLoggerSizeToString, loginfo...)
+		o.Logger = newLogger
+		if old != nil {
+			oldFd, ok := old.(*os.File)
+			if !ok {
+				//nolint
+				fmt.Println("assert fault")
+				return
+			}
+			_ = oldFd.Close()
+		}
+	case *stdLog:
+		// Should we create it?
+		newLogger := NewFileLog(dumpPath, false, "", loginfo...)
+		o.Logger = newLogger
+		df.Close()
+	}
+}
+
 // WithCollectInterval : interval must be valid time duration string,
 // eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func WithCollectInterval(interval string) Option {
@@ -384,6 +423,24 @@ func WithLoggerLevel(level Lever) Option {
 
 func WithLogger(logger Logger) Option {
 	return optionFunc(func(opts *options) (err error) {
+		if opts.Logger != nil {
+			switch lg := opts.Logger.(type) {
+			case *fileLog:
+				old := lg.logger.Load()
+				if old != nil {
+					oldFd, ok := old.(*os.File)
+					if !ok {
+						//nolint
+						fmt.Println("assert fault")
+						return
+					}
+					_ = oldFd.Close()
+				}
+
+			case *stdLog:
+				_ = lg.Close()
+			}
+		}
 		opts.Logger = logger
 		return
 	})
@@ -393,8 +450,9 @@ func WithLogger(logger Logger) Option {
 // shardLoggerSize eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
 func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, loginfo ...string) Logger {
 	f := &fileLog{
-		rotateEnable: rotateEnable,
-		logger:       atomic.Value{},
+		rotateEnable:            rotateEnable,
+		splitLoggerSizeToString: shardLoggerSize,
+		logger:                  atomic.Value{},
 	}
 
 	if rotateEnable {

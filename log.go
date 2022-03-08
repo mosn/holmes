@@ -13,11 +13,12 @@ type Logger interface {
 }
 
 type fileLog struct {
-	changelog       int32        // changelog marker bit
-	dumpPath        string       // dumpPath
-	rotateEnable    bool         // rotateEnable Turn on syncopation
-	splitLoggerSize int64        // splitLoggerSize The size of the log split
-	logger          atomic.Value // Logger *os.File
+	changelog               int32        // changelog marker bit
+	dumpPath                string       // dumpPath
+	rotateEnable            bool         // rotateEnable Turn on syncopation
+	splitLoggerSizeToString string       // splitLoggerSizeToString  There is no pre-translation.
+	splitLoggerSize         int64        // splitLoggerSize The size of the log split
+	logger                  atomic.Value // Logger *os.File
 }
 
 func (f *fileLog) Print(context string) {
@@ -114,19 +115,3 @@ func (h *Holmes) debugf(pattern string, args ...interface{}) {
 		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
 	}
 }
-
-////nolint
-//// log write content to log file.
-//func (h *Holmes) warnf(pattern string, args ...interface{}) {
-//	if h.opts.LogLevel.Allow(LogLevelWarn) {
-//		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
-//	}
-//}
-//
-////nolint
-//// log write content to log file.
-//func (h *Holmes) errorf(pattern string, args ...interface{}) {
-//	if h.opts.LogLevel.Allow(LogLevelError) {
-//		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
-//	}
-//}
