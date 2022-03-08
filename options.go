@@ -72,7 +72,6 @@ type ReporterOptions struct {
 	active   int32 // switch
 	eventsCh chan rptEvent
 	cancelCh chan struct{}
-	changeCh chan ProfileReporter
 }
 
 // newReporterOpts returns  ReporterOptions。
@@ -80,7 +79,6 @@ func newReporterOpts() *ReporterOptions {
 	opts := &ReporterOptions{}
 	opts.eventsCh = make(chan rptEvent, 32)
 	opts.cancelCh = make(chan struct{}, 1)
-	opts.changeCh = make(chan ProfileReporter, 1)
 
 	return opts
 }
@@ -496,7 +494,6 @@ func WithProfileReporter(r ProfileReporter) Option {
 		}
 
 		opts.pReportOpts.reporter = r
-		opts.pReportOpts.changeCh <- r
 		atomic.StoreInt32(&opts.pReportOpts.active, 1)
 		return
 	})

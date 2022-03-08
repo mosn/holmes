@@ -718,31 +718,25 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
-	// opts.reporter is nil for now because we haven't call WithProfileReporter to initial it yet.
 	opts := h.opts.GetReporterOpts()
-	go func(cancelCh <-chan struct{}, eventsCh <-chan rptEvent, changeReporterCh <-chan ProfileReporter) {
-		// waiting holmes initials the reporter
-		reporter := <-changeReporterCh
-
+	go func(cancelCh <-chan struct{}, eventsCh <-chan rptEvent) {
 		for {
 			select {
 			case <-opts.cancelCh:
 				h.logf("stop reporter background goroutine")
 				return
-			case new := <-changeReporterCh:
-				h.logf("change Reporter")
-				reporter = new
 			default:
 				evt := <-eventsCh
-				if reporter == nil {
+				opts := h.opts.GetReporterOpts()
+				if opts.reporter == nil {
 					h.logf("reporter is nil, please initial it before startReporter")
-					// drop the message?
+					// drop the event
 					continue
 				}
-				reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+				opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 			}
 		}
-	}(opts.cancelCh, opts.eventsCh, opts.changeCh)
+	}(opts.cancelCh, opts.eventsCh)
 }
 
 func (h *Holmes) stopReporter() {
