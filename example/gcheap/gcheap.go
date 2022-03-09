@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	//"github.com/mosn/holmes/reporters/http_reporter"
+	//"mosn.io/holmes/reporters/http_reporter"
 	"math/rand"
 	"net/http"
 	"time"
 
-	"github.com/mosn/holmes"
+	"mosn.io/holmes"
 )
 
 func init() {
