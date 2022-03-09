@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	//"github.com/mosn/holmes/reporters/http_reporter"
 	"math/rand"
 	"net/http"
 	"time"
@@ -16,12 +17,14 @@ func init() {
 }
 
 func main() {
+	// reporter := http_reporter.NewReporter("TOKEN", "URL")
 	h, _ := holmes.New(
 		holmes.WithCoolDown("10s"),
 		holmes.WithDumpPath("/tmp"),
 		holmes.WithBinaryDump(),
 		holmes.WithMemoryLimit(100*1024*1024), // 100MB
 		holmes.WithGCHeapDump(10, 20, 40),
+		// holmes.WithProfileReporter(reporter),
 	)
 	h.EnableGCHeapDump().Start()
 	time.Sleep(time.Hour)
