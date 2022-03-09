@@ -3,6 +3,7 @@ package holmes
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -49,14 +50,25 @@ type Holmes struct {
 
 	// switch
 	stopped int64
+
+	// profiler reporter channels
+	rptEventsCh chan rptEvent
+	rptCancelCh chan struct{}
+}
+
+type ProfileReporter interface {
+	Report(pType string, buf []byte, reason string, eventID string) error
 }
 
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
-		opts:    newOptions(),
-		finCh:   make(chan struct{}),
-		stopped: 1, // Initialization should be off
+
+		opts:        newOptions(),
+		finCh:       make(chan struct{}, 1),
+		stopped:     1, // Initialization should be off
+		rptEventsCh: make(chan rptEvent, 32),
+		rptCancelCh: make(chan struct{}, 1),
 	}
 
 	for _, opt := range opts {
@@ -171,6 +183,7 @@ func (h *Holmes) Start() {
 	}
 	h.initEnvironment()
 	go h.startDumpLoop()
+	go h.startReporter()
 
 	h.startGCCycleLoop()
 }
@@ -178,6 +191,7 @@ func (h *Holmes) Start() {
 // Stop the dump loop.
 func (h *Holmes) Stop() {
 	atomic.StoreInt64(&h.stopped, 1)
+	h.stopReporter()
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -288,7 +302,9 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 }
 
 func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
-	if !matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax) {
+	pType := type2name[goroutine]
+	match, reason := matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax)
+	if !match {
 		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
@@ -298,6 +314,8 @@ func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeGrProfileDataToFile(buf, c, goroutine, gNum)
+
+	h.ReportProfile(pType, buf.Bytes(), reason, "")
 	return true
 }
 
@@ -323,9 +341,11 @@ func (h *Holmes) memCheckAndDump(mem int) {
 }
 
 func (h *Holmes) memProfile(rss int, c typeOption) bool {
-	if !matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
+	pType := type2name[mem]
+	match, reason := matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
+	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", type2name[mem],
+		h.debugf(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
@@ -336,6 +356,8 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
 	h.writeProfileDataToFile(buf, c, mem, rss, h.memStats, "")
+
+	h.ReportProfile(pType, buf.Bytes(), reason, "")
 	return true
 }
 
@@ -414,9 +436,11 @@ func (h *Holmes) startShrinkThread() {
 }
 
 func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
-	if !matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
+	pType := type2name[thread]
+	match, reason := matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
+	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", type2name[thread],
+		h.debugf(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
@@ -430,9 +454,13 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats, eventID)
 
+	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
+
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, goroutine, curThreadNum, h.threadStats, eventID)
+
+	h.ReportProfile("goroutine", buf.Bytes(), reason, eventID)
 
 	return true
 }
@@ -462,9 +490,11 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 }
 
 func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
-	if !matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
+	pType := type2name[cpu]
+	match, reason := matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
+	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", type2name[cpu],
+		h.debugf(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
@@ -478,7 +508,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		h.logf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false
 	}
-	defer bf.Close()
+	defer bf.Close() // nolint: errcheck
 
 	err = pprof.StartCPUProfile(bf)
 	if err != nil {
@@ -492,6 +522,15 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 	h.logf(UniformLogFormat, "pprof dump to log dir", type2name[cpu],
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
+
+	if opts := h.opts.GetReporterOpts(); opts.active == 1 {
+		bfCpy, err := ioutil.ReadFile(binFileName)
+		if err != nil {
+			h.logf("fail to build copy of bf, err %v", err)
+			return true
+		}
+		h.ReportProfile(pType, bfCpy, reason, "")
+	}
 
 	return true
 }
@@ -595,9 +634,11 @@ func (h *Holmes) getMemoryLimit() (uint64, error) {
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
 func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
-	if !force && !matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig) {
+	pType := type2name[gcHeap]
+	match, reason := matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
+	if !force && !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", type2name[gcHeap],
+		h.debugf(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, gc)
@@ -612,6 +653,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, c, gcHeap, gc, h.gcHeapStats, eventID)
 
+	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
 	return true
 }
 
@@ -669,4 +711,52 @@ func (h *Holmes) Set(opts ...Option) error {
 		}
 	}
 	return nil
+}
+
+func (h *Holmes) DisableProfileReporter() {
+	atomic.StoreInt32(&h.opts.rptOpts.active, 0)
+}
+
+func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
+	opts := h.opts.GetReporterOpts()
+	if opts.active == 0 {
+		return
+	}
+	h.rptEventsCh <- rptEvent{
+		pType,
+		buf,
+		reason,
+		eventID}
+}
+
+// startReporter starts a background goroutine to consume event channel,
+// and finish it at after receive from cancel channel.
+func (h *Holmes) startReporter() {
+	go func() {
+		for {
+			select {
+			case <-h.rptCancelCh:
+				h.logf("stop reporter background goroutine")
+				return
+			default:
+				evt := <-h.rptEventsCh
+				opts := h.opts.GetReporterOpts()
+				if opts.reporter == nil {
+					h.logf("reporter is nil, please initial it before startReporter")
+					// drop the event
+					continue
+				}
+
+				if opts.active == 0 {
+					//drop the event
+					continue
+				}
+				opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+			}
+		}
+	}()
+}
+
+func (h *Holmes) stopReporter() {
+	h.rptCancelCh <- struct{}{}
 }
