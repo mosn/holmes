@@ -409,7 +409,7 @@ func WithLogger(logger Logger) Option {
 					oldFd, ok := old.(*os.File)
 					if !ok {
 						//nolint
-						fmt.Println("assert fault")
+						fmt.Println("[Holmes] assert fault, expecting *os.File")
 						return
 					}
 					_ = oldFd.Close()
