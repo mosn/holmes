@@ -167,40 +167,8 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 			f = dumpPath + "/" + path.Join(loginfo...)
 		}
 		opts.DumpPath = filepath.Dir(f)
-		opts.defaultLoggerHandler(dumpPath, loginfo...)
 		return
 	})
-}
-
-func (o *options) defaultLoggerHandler(dumpPath string, loginfo ...string) {
-	o.loggerLock.Lock()
-	defer o.loggerLock.Unlock()
-	oldLogger := o.Logger
-	if oldLogger == nil {
-		return
-	}
-
-	switch df := oldLogger.(type) {
-	case *fileLog:
-		o.Logger = NewFileLog(dumpPath, df.rotateEnable, df.splitLoggerSizeToString, loginfo...)
-
-		old := df.logger.Load()
-		if old == nil {
-			return
-		}
-		oldFd, ok := old.(*os.File)
-		if !ok {
-			//nolint
-			fmt.Println("assert fault")
-			return
-		}
-		_ = oldFd.Close()
-
-	case *stdLog:
-		// Should we create it?
-		o.Logger = NewFileLog(dumpPath, false, "", loginfo...)
-		_ = df.Close()
-	}
 }
 
 // WithCollectInterval : interval must be valid time duration string,
@@ -447,8 +415,6 @@ func WithLogger(logger Logger) Option {
 					_ = oldFd.Close()
 				}
 
-			case *stdLog:
-				_ = lg.Close()
 			}
 		}
 		opts.Logger = logger
