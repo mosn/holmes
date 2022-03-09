@@ -105,6 +105,14 @@ func (s *stdLog) Print(context string) {
 func (h *Holmes) logf(pattern string, args ...interface{}) {
 	if h.opts.LogLevel.Allow(LogLevelInfo) {
 		timestamp := "[" + time.Now().Format("2006-01-02 15:04:05.000") + "]"
+		h.opts.loggerLock.RLock()
+		defer h.opts.loggerLock.RUnlock()
+		if h.opts.Logger == nil {
+			//nolint
+			fmt.Println("logf err: logger is empty")
+			return
+		}
+
 		h.opts.Logger.Print(fmt.Sprintf(timestamp+pattern+"\n", args...))
 	}
 }
@@ -112,6 +120,13 @@ func (h *Holmes) logf(pattern string, args ...interface{}) {
 // log write content to log file.
 func (h *Holmes) debugf(pattern string, args ...interface{}) {
 	if h.opts.LogLevel.Allow(LogLevelDebug) {
+		h.opts.loggerLock.RLock()
+		defer h.opts.loggerLock.RUnlock()
+		if h.opts.Logger == nil {
+			//nolint
+			fmt.Println("debugf err: logger is empty")
+			return
+		}
 		h.opts.Logger.Print(fmt.Sprintf(pattern+"\n", args...))
 	}
 }

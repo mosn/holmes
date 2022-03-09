@@ -12,10 +12,8 @@ func init() {
 	go http.ListenAndServe(":10003", nil)
 }
 
-var h *holmes.Holmes
-
 func main() {
-	h, _ = holmes.New(
+	h, _ := holmes.New(
 		holmes.WithCollectInterval("2s"),
 		holmes.WithCoolDown("1m"),
 		holmes.WithLogger(holmes.NewFileLog("./tmp", true, "1000b")),

@@ -25,8 +25,10 @@ type options struct {
 	*DumpOptions
 
 	LogLevel Lever
-	// Logger *os.File
-	Logger Logger
+
+	// Logger Logger
+	Logger     Logger
+	loggerLock sync.RWMutex
 
 	// interval for dump loop, default 5s
 	CollectInterval   time.Duration
@@ -171,28 +173,33 @@ func WithDumpPath(dumpPath string, loginfo ...string) Option {
 }
 
 func (o *options) defaultLoggerHandler(dumpPath string, loginfo ...string) {
-	if o.Logger == nil {
+	o.loggerLock.Lock()
+	defer o.loggerLock.Unlock()
+	oldLogger := o.Logger
+	if oldLogger == nil {
 		return
 	}
-	switch df := o.Logger.(type) {
+
+	switch df := oldLogger.(type) {
 	case *fileLog:
+		o.Logger = NewFileLog(dumpPath, df.rotateEnable, df.splitLoggerSizeToString, loginfo...)
+
 		old := df.logger.Load()
-		newLogger := NewFileLog(dumpPath, df.rotateEnable, df.splitLoggerSizeToString, loginfo...)
-		o.Logger = newLogger
-		if old != nil {
-			oldFd, ok := old.(*os.File)
-			if !ok {
-				//nolint
-				fmt.Println("assert fault")
-				return
-			}
-			_ = oldFd.Close()
+		if old == nil {
+			return
 		}
+		oldFd, ok := old.(*os.File)
+		if !ok {
+			//nolint
+			fmt.Println("assert fault")
+			return
+		}
+		_ = oldFd.Close()
+
 	case *stdLog:
 		// Should we create it?
-		newLogger := NewFileLog(dumpPath, false, "", loginfo...)
-		o.Logger = newLogger
-		df.Close()
+		o.Logger = NewFileLog(dumpPath, false, "", loginfo...)
+		_ = df.Close()
 	}
 }
 
@@ -423,8 +430,11 @@ func WithLoggerLevel(level Lever) Option {
 
 func WithLogger(logger Logger) Option {
 	return optionFunc(func(opts *options) (err error) {
-		if opts.Logger != nil {
-			switch lg := opts.Logger.(type) {
+		opts.loggerLock.Lock()
+		defer opts.loggerLock.Unlock()
+		oldLogger := opts.Logger
+		if oldLogger != nil {
+			switch lg := oldLogger.(type) {
 			case *fileLog:
 				old := lg.logger.Load()
 				if old != nil {
