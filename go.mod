@@ -1,4 +1,4 @@
-module github.com/mosn/holmes
+module mosn.io/holmes
 
 go 1.14
 
