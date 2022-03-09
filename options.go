@@ -448,11 +448,11 @@ func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, logi
 	f.dumpPath = filepath.Dir(filePath)
 
 	var (
-		logger *os.File
+		logObj *os.File
 		err    error
 	)
 
-	logger, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
+	logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
 	if err != nil && os.IsNotExist(err) {
 		if err = os.MkdirAll(f.dumpPath, 0755); err != nil {
 			//nolint
@@ -460,7 +460,7 @@ func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, logi
 			return nil
 		}
 
-		logger, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
+		logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
 		if err != nil {
 			//nolint
 			fmt.Println("open file err", err)
@@ -474,7 +474,7 @@ func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, logi
 		return nil
 	}
 
-	f.logger.Store(logger)
+	f.logger.Store(logObj)
 	return f
 }
 

@@ -18,7 +18,7 @@ func init() {
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCoolDown("10s"),
-		holmes.WithLogger(holmes.NewFileLog("./tmp", false, "")),
+		holmes.WithDumpPath("/tmp"),
 		holmes.WithBinaryDump(),
 		holmes.WithMemoryLimit(100*1024*1024), // 100MB
 		holmes.WithGCHeapDump(10, 20, 40),
