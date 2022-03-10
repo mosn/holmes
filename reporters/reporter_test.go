@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mosn/holmes"
+	"mosn.io/holmes"
 )
 
 var h *holmes.Holmes

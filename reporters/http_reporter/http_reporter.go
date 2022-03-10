@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mosn/holmes"
+	"mosn.io/holmes"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
