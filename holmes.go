@@ -62,10 +62,9 @@ type ProfileReporter interface {
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
 
-		opts:        newOptions(),
-		finCh:       make(chan struct{}, 1),
-		stopped:     1, // Initialization should be off
-		rptEventsCh: make(chan rptEvent, 32),
+		opts:    newOptions(),
+		finCh:   make(chan struct{}, 1),
+		stopped: 1, // Initialization should be off
 	}
 
 	for _, opt := range opts {
@@ -708,7 +707,8 @@ func (h *Holmes) DisableProfileReporter() {
 }
 
 func (h *Holmes) EnableProfileReporter() {
-	if h.opts.rptOpts.reporter == nil {
+	opt := h.opts.GetReporterOpts()
+	if opt.reporter == nil {
 		h.logf("enable profile reporter fault, reporter is empty")
 		return
 	}
@@ -735,6 +735,7 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
+	h.rptEventsCh = make(chan rptEvent, 32)
 	go func() {
 		for evt := range h.rptEventsCh {
 			opts := h.opts.GetReporterOpts()
@@ -744,7 +745,10 @@ func (h *Holmes) startReporter() {
 				continue
 			}
 			// It's supposed to be sending judgment, isn't it?
-			_ = opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+			err := opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+			if err != nil {
+				h.logf("reporter err:", err)
+			}
 		}
 	}()
 }
