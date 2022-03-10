@@ -17,6 +17,7 @@ func main() {
 		holmes.WithCollectInterval("2s"),
 		holmes.WithCoolDown("1m"),
 		holmes.WithDumpPath("/tmp"),
+		holmes.WithLogger(holmes.NewFileLog("/tmp", false, "")),
 		holmes.WithTextDump(),
 		holmes.WithMemDump(3, 25, 80),
 	)

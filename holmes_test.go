@@ -2,7 +2,6 @@ package holmes
 
 import (
 	"log"
-	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -15,7 +14,6 @@ func TestMain(m *testing.M) {
 	h, _ = New(
 		WithCollectInterval("1s"),
 		WithCoolDown("1s"),
-		WithDumpPath("./"),
 		WithTextDump(),
 		WithGoroutineDump(10, 25, 80, 90),
 	)
@@ -39,15 +37,6 @@ func TestResetCollectInterval(t *testing.T) {
 		}
 	}()
 	time.Sleep(8 * time.Second)
-}
-
-func TestSetDumpPath(t *testing.T) {
-	h.Set(WithDumpPath("./test_case_gen"))
-	defer h.Set(WithDumpPath("./"))
-
-	if h.opts.Logger.Load().(*os.File).Name()[:13] != "test_case_gen" {
-		log.Fatalf("fail")
-	}
 }
 
 func TestSetGrOpts(t *testing.T) {

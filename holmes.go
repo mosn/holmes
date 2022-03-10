@@ -17,7 +17,6 @@ type Holmes struct {
 	opts *options
 
 	// stats
-	changelog                int32
 	collectCount             int
 	gcCycleCount             int
 	threadTriggerCount       int
@@ -684,12 +683,6 @@ func (h *Holmes) initEnvironment() {
 		h.logf("[Holmes] use cgroup to limit memory")
 	} else {
 		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
-	}
-
-	logger := h.opts.Logger.Load()
-
-	if (logger == nil || logger == os.Stdout) && h.opts.logOpts.RotateEnable {
-		h.opts.logOpts.RotateEnable = false
 	}
 }
 
