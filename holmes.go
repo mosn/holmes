@@ -52,7 +52,6 @@ type Holmes struct {
 
 	// profiler reporter channels
 	rptEventsCh chan rptEvent
-	rptCancelCh chan struct{}
 }
 
 type ProfileReporter interface {
@@ -67,7 +66,6 @@ func New(opts ...Option) (*Holmes, error) {
 		finCh:       make(chan struct{}, 1),
 		stopped:     1, // Initialization should be off
 		rptEventsCh: make(chan rptEvent, 32),
-		rptCancelCh: make(chan struct{}, 1),
 	}
 
 	for _, opt := range opts {
@@ -190,7 +188,6 @@ func (h *Holmes) Start() {
 // Stop the dump loop.
 func (h *Holmes) Stop() {
 	atomic.StoreInt64(&h.stopped, 1)
-	h.stopReporter()
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -710,7 +707,20 @@ func (h *Holmes) DisableProfileReporter() {
 	atomic.StoreInt32(&h.opts.rptOpts.active, 0)
 }
 
+func (h *Holmes) EnableProfileReporter() {
+	if h.opts.rptOpts.reporter == nil {
+		h.logf("enable profile reporter fault, reporter is empty")
+		return
+	}
+	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
+}
+
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
+	if atomic.LoadInt64(&h.stopped) == 1 {
+		close(h.rptEventsCh)
+		return
+	}
+
 	opts := h.opts.GetReporterOpts()
 	if opts.active == 0 {
 		return
@@ -726,30 +736,15 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
 	go func() {
-		for {
-			select {
-			case <-h.rptCancelCh:
-				h.logf("stop reporter background goroutine")
-				return
-			default:
-				evt := <-h.rptEventsCh
-				opts := h.opts.GetReporterOpts()
-				if opts.reporter == nil {
-					h.logf("reporter is nil, please initial it before startReporter")
-					// drop the event
-					continue
-				}
-
-				if opts.active == 0 {
-					//drop the event
-					continue
-				}
-				opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+		for evt := range h.rptEventsCh {
+			opts := h.opts.GetReporterOpts()
+			if opts.reporter == nil {
+				h.logf("reporter is nil, please initial it before startReporter")
+				// drop the event
+				continue
 			}
+			// It's supposed to be sending judgment, isn't it?
+			_ = opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 		}
 	}()
-}
-
-func (h *Holmes) stopReporter() {
-	h.rptCancelCh <- struct{}{}
 }
