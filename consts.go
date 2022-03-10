@@ -57,9 +57,9 @@ const (
 var type2name = map[configureType]string{
 	mem:       "mem",
 	cpu:       "cpu",
-	thread:    "thread",
+	thread:    "threadcreate",
 	goroutine: "goroutine",
-	gcHeap:    "GCHeap",
+	gcHeap:    "heap",
 }
 
 const (
