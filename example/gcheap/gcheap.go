@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	mlog "mosn.io/pkg/log"
+
 	//"mosn.io/holmes/reporters/http_reporter"
 	"math/rand"
 	"net/http"
@@ -21,7 +23,7 @@ func main() {
 	h, _ := holmes.New(
 		holmes.WithCoolDown("10s"),
 		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp", false, "")),
+		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
 		holmes.WithBinaryDump(),
 		holmes.WithMemoryLimit(100*1024*1024), // 100MB
 		holmes.WithGCHeapDump(10, 20, 40),
