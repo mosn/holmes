@@ -54,14 +54,16 @@ const (
 	gcHeap
 )
 
+// check type to profile name, just align to pprof
 var type2name = map[configureType]string{
-	mem:       "mem",
+	mem:       "heap",
 	cpu:       "cpu",
 	thread:    "threadcreate",
 	goroutine: "goroutine",
 	gcHeap:    "heap",
 }
 
+// check type to check name
 var check2name = map[configureType]string{
 	mem:       "mem",
 	cpu:       "cpu",
