@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mosn/holmes"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+
+	"mosn.io/holmes"
 )
 
 type HttpReporter struct {

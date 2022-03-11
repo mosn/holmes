@@ -71,8 +71,9 @@ type rptEvent struct {
 }
 
 type ReporterOptions struct {
-	reporter ProfileReporter
-	active   int32 // switch
+	reporter        ProfileReporter
+	allowDiscarding bool  // Allow discarding when the channel cache is full
+	active          int32 // switch
 }
 
 // newReporterOpts returns  ReporterOptions。
@@ -524,13 +525,14 @@ func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
 
 // WithProfileReporter will enable reporter
 // reopens profile reporter through WithProfileReporter(h.opts.rptOpts.reporter)
-func WithProfileReporter(r ProfileReporter) Option {
+func WithProfileReporter(r ProfileReporter, allowDiscarding bool) Option {
 	return optionFunc(func(opts *options) (err error) {
 		if r == nil {
 			return nil
 		}
 
 		opts.rptOpts.reporter = r
+		opts.rptOpts.allowDiscarding = allowDiscarding
 		atomic.StoreInt32(&opts.rptOpts.active, 1)
 		return
 	})
