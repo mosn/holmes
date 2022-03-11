@@ -25,10 +25,9 @@ func init() {
 	go func() {
 		h, _ := holmes.New(
 			holmes.WithCollectInterval("2s"),
-			holmes.WithCoolDown("5s"),
 			holmes.WithDumpPath("/tmp"),
 			holmes.WithTextDump(),
-			holmes.WithThreadDump(10, 25, 100),
+			holmes.WithThreadDump(10, 25, 100, time.Minute),
 		)
 		h.EnableThreadDump().Start()
 		time.Sleep(time.Hour)

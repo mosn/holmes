@@ -17,11 +17,10 @@ func init() {
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCollectInterval("2s"),
-		holmes.WithCoolDown("1m"),
 		holmes.WithDumpPath("/tmp"),
 		holmes.WithTextDump(),
-		holmes.WithMemDump(3, 25, 80),
-		holmes.WithCPUDump(60, 10, 80),
+		holmes.WithMemDump(3, 25, 80, time.Minute),
+		holmes.WithCPUDump(60, 10, 80, time.Minute),
 		holmes.WithCGroup(true),
 	)
 	h.EnableCPUDump()

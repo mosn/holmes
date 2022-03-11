@@ -281,9 +281,7 @@ func (h *Holmes) startDumpLoop() {
 // goroutine start.
 func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	// get a copy instead of locking it
-	coolDown := h.opts.CoolDown
 	grOpts := h.opts.GetGrOpts()
-
 	if !grOpts.Enable {
 		return
 	}
@@ -294,7 +292,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	}
 	// grOpts is a struct, no escape.
 	if triggered := h.goroutineProfile(gNum, grOpts); triggered {
-		h.grCoolDownTime = time.Now().Add(coolDown)
+		h.grCoolDownTime = time.Now().Add(grOpts.CoolDown)
 		h.grTriggerCount++
 	}
 }
@@ -324,9 +322,7 @@ func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 // memory start.
 func (h *Holmes) memCheckAndDump(mem int) {
 	// get a copy instead of locking it
-	coolDown := h.opts.CoolDown
 	memOpts := h.opts.GetMemOpts()
-
 	if !memOpts.Enable {
 		return
 	}
@@ -337,7 +333,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	}
 	// memOpts is a struct, no escape.
 	if triggered := h.memProfile(mem, memOpts); triggered {
-		h.memCoolDownTime = time.Now().Add(coolDown)
+		h.memCoolDownTime = time.Now().Add(memOpts.CoolDown)
 		h.memTriggerCount++
 	}
 }
@@ -384,6 +380,9 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 		if delay < time.Hour {
 			delay = time.Hour
 		}
+		if delay > time.Hour*24 {
+			delay = time.Hour * 24
+		}
 		h.shrinkThrCoolDownTime = time.Now().Add(delay)
 
 		h.Alertf("holmes.thread", "current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
@@ -397,11 +396,7 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 
 // thread start.
 func (h *Holmes) threadCheckAndDump(threadNum int) {
-	// get a copy instead of locking it
-	coolDown := h.opts.CoolDown
-
 	threadOpts := h.opts.GetThreadOpts()
-
 	if !threadOpts.Enable {
 		return
 	}
@@ -412,8 +407,7 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	}
 	// threadOpts is a struct, no escape.
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
-		// TODO: use thread coolDown time.
-		h.threadCoolDownTime = time.Now().Add(coolDown)
+		h.threadCoolDownTime = time.Now().Add(threadOpts.CoolDown)
 		h.threadTriggerCount++
 	}
 }
@@ -484,11 +478,7 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 
 // cpu start.
 func (h *Holmes) cpuCheckAndDump(cpu int) {
-	// get a copy instead of locking it
-	coolDown := h.opts.CoolDown
-
 	cpuOpts := h.opts.GetCPUOpts()
-
 	if !cpuOpts.Enable {
 		return
 	}
@@ -499,7 +489,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 	}
 	// cpuOpts is a struct, no escape.
 	if triggered := h.cpuProfile(cpu, cpuOpts); triggered {
-		h.cpuCoolDownTime = time.Now().Add(coolDown)
+		h.cpuCoolDownTime = time.Now().Add(cpuOpts.CoolDown)
 		h.cpuTriggerCount++
 	}
 }
@@ -563,9 +553,6 @@ func (h *Holmes) gcHeapCheckLoop() {
 }
 
 func (h *Holmes) gcHeapCheckAndDump() {
-	// get a copy instead of locking it
-	coolDown := h.opts.CoolDown
-
 	gcHeapOpts := h.opts.GetGcHeapOpts()
 
 	if !gcHeapOpts.Enable || atomic.LoadInt64(&h.stopped) == 1 {
@@ -607,7 +594,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 		if h.gcHeapTriggered {
 			// already dump twice, mark it false
 			h.gcHeapTriggered = false
-			h.gcHeapCoolDownTime = time.Now().Add(coolDown)
+			h.gcHeapCoolDownTime = time.Now().Add(gcHeapOpts.CoolDown)
 			h.gcHeapTriggerCount++
 		} else {
 			// force dump next time

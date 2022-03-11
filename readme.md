@@ -17,7 +17,6 @@ holmes comes to rescue.
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
-    holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
     holmes.WithGoroutineDump(10, 25, 2000, 10*1000),
@@ -47,7 +46,6 @@ h.Stop()
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
-    holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithCPUDump(20, 25, 80),
     holmes.WithCPUMax(90),
@@ -77,7 +75,6 @@ h.Stop()
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
-    holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
     holmes.WithMemDump(30, 25, 80),
@@ -107,7 +104,6 @@ It's easy.
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
-    holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
 
@@ -127,7 +123,6 @@ h.EnableMemDump().
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
-    holmes.WithCoolDown("1m"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
 
