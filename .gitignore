@@ -7,3 +7,14 @@
 vendor
 
 reporters/*.bin
+
+example/1gbslice/1gbslice
+example/alloc/alloc
+example/channelblock/channelblock
+example/cpu_explode/cpu_explode
+example/deadlock/deadlock
+example/deadloop/deadloop
+example/gcheap/m
+example/run_in_docker/run_in_docker
+example/slowlyleak/slowlyleak
+example/thread_trigger/thread_trigger
