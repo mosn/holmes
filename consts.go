@@ -27,8 +27,11 @@ const (
 	defaultGCHeapTriggerAbs  = 40 // 40%
 	defaultGCHeapTriggerDiff = 20 // 20%
 
+	defaultCooldown          = time.Minute
+	defaultThreadCoolDown    = time.Hour
+	defaultGoroutineCoolDown = time.Minute * 10
+
 	defaultInterval        = 5 * time.Second
-	defaultCooldown        = time.Minute
 	defaultDumpProfileType = binaryDump
 	defaultDumpPath        = "/tmp"
 	defaultLoggerName      = "holmes.log"

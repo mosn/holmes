@@ -25,14 +25,6 @@ type options struct {
 	CollectInterval   time.Duration
 	intervalResetting chan struct{}
 
-	// the cooldown time after every type of dump
-	// interval for cooldown，default 1m
-	// the cpu/mem/goroutine have different cooldowns of their own
-
-	// todo should we move CoolDown into Gr/CPU/MEM/GCheap Opts and support
-	// set different `CoolDown` for different opts?
-	CoolDown time.Duration
-
 	// if current cpu usage percent is greater than CPUMaxPercent,
 	// holmes would not dump all types profile, cuz this
 	// move may result of the system crash.
@@ -41,6 +33,10 @@ type options struct {
 	// if write lock is held mean holmes's
 	// configuration is being modified.
 	L *sync.RWMutex
+
+	// the cooldown time after every type of dump
+	// interval for cooldown，default 1m
+	// each check type have different cooldowns of their own
 
 	grOpts *grOptions
 
@@ -165,7 +161,6 @@ func newOptions() *options {
 		threadOpts:        newThreadOptions(),
 		CollectInterval:   defaultInterval,
 		intervalResetting: make(chan struct{}, 1),
-		CoolDown:          defaultCooldown,
 		DumpOptions: &DumpOptions{
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
@@ -215,15 +210,6 @@ func WithCollectInterval(interval string) Option {
 	})
 }
 
-// WithCoolDown : coolDown must be valid time duration string,
-// eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
-func WithCoolDown(coolDown string) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.CoolDown, err = time.ParseDuration(coolDown)
-		return
-	})
-}
-
 // WithCPUMax : set the CPUMaxPercent parameter as max
 func WithCPUMax(max int) Option {
 	return optionFunc(func(opts *options) (err error) {
@@ -269,14 +255,16 @@ func newGrOptions() *grOptions {
 	base := newTypeOpts(
 		defaultGoroutineTriggerMin,
 		defaultGoroutineTriggerAbs,
-		defaultGoroutineTriggerDiff)
+		defaultGoroutineTriggerDiff,
+		defaultGoroutineCoolDown,
+	)
 	return &grOptions{typeOption: base}
 }
 
 // WithGoroutineDump set the goroutine dump options.
-func WithGoroutineDump(min int, diff int, abs int, max int) Option {
+func WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.grOpts.Set(min, abs, diff)
+		opts.grOpts.Set(min, abs, diff, coolDown)
 		opts.grOpts.GoroutineTriggerNumMax = max
 		return
 	})
@@ -292,19 +280,23 @@ type typeOption struct {
 
 	// mem/cpu/gcheap/goroutine/thread trigger diff in percent
 	TriggerDiff int
+
+	// CoolDown skip profile for CoolDown time after done a profile
+	CoolDown time.Duration
 }
 
-func newTypeOpts(triggerMin, triggerAbs, triggerDiff int) *typeOption {
+func newTypeOpts(triggerMin, triggerAbs, triggerDiff int, coolDown time.Duration) *typeOption {
 	return &typeOption{
 		Enable:      false,
 		TriggerMin:  triggerMin,
 		TriggerAbs:  triggerAbs,
 		TriggerDiff: triggerDiff,
+		CoolDown:    coolDown,
 	}
 }
 
-func (base *typeOption) Set(min, abs, diff int) {
-	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
+func (base *typeOption) Set(min, abs, diff int, coolDown time.Duration) {
+	base.TriggerMin, base.TriggerAbs, base.TriggerDiff, base.CoolDown = min, abs, diff, coolDown
 }
 
 // newMemOptions
@@ -315,13 +307,15 @@ func newMemOptions() *typeOption {
 	return newTypeOpts(
 		defaultMemTriggerMin,
 		defaultMemTriggerAbs,
-		defaultMemTriggerDiff)
+		defaultMemTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithMemDump set the memory dump options.
-func WithMemDump(min int, diff int, abs int) Option {
+func WithMemDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.memOpts.Set(min, abs, diff)
+		opts.memOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -335,13 +329,15 @@ func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
 		defaultGCHeapTriggerMin,
 		defaultGCHeapTriggerAbs,
-		defaultGCHeapTriggerDiff)
+		defaultGCHeapTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithGCHeapDump set the GC heap dump options.
-func WithGCHeapDump(min int, diff int, abs int) Option {
+func WithGCHeapDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.gCHeapOpts.Set(min, abs, diff)
+		opts.gCHeapOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -367,13 +363,15 @@ func newThreadOptions() *typeOption {
 	return newTypeOpts(
 		defaultThreadTriggerMin,
 		defaultThreadTriggerAbs,
-		defaultThreadTriggerDiff)
+		defaultThreadTriggerDiff,
+		defaultThreadCoolDown,
+	)
 }
 
 // WithThreadDump set the thread dump options.
-func WithThreadDump(min, diff, abs int) Option {
+func WithThreadDump(min, diff, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.threadOpts.Set(min, abs, diff)
+		opts.threadOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -388,13 +386,15 @@ func newCPUOptions() *typeOption {
 	return newTypeOpts(
 		defaultCPUTriggerMin,
 		defaultCPUTriggerAbs,
-		defaultCPUTriggerDiff)
+		defaultCPUTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithCPUDump set the cpu dump options.
-func WithCPUDump(min int, diff int, abs int) Option {
+func WithCPUDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.Set(min, abs, diff)
+		opts.cpuOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
