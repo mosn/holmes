@@ -675,9 +675,12 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 }
 
 func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, eventID string) {
-	if err := writeFile(data, dumpType, h.opts.DumpOptions, eventID); err != nil {
-		h.Errorf("failed to write profile to file: %s", err.Error())
+	fileName, err := writeFile(data, dumpType, h.opts.DumpOptions, eventID)
+	if err != nil {
+		h.Errorf("failed to write profile to file(%v), err: %s", fileName, err.Error())
+		return
 	}
+	h.Infof("[Holmes] pprof %v profile write to file %v successfully", check2name[dumpType], fileName)
 }
 
 func (h *Holmes) initEnvironment() {
