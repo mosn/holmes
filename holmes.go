@@ -176,7 +176,7 @@ func (h *Holmes) startGCCycleLoop() {
 func (h *Holmes) Start() {
 	if !atomic.CompareAndSwapInt64(&h.stopped, 1, 0) {
 		//nolint
-		fmt.Println("Holmes has started, please don't start it again.")
+		h.Errorf("Holmes has started, please don't start it again.")
 		return
 	}
 	h.initEnvironment()
@@ -217,7 +217,7 @@ func (h *Holmes) startDumpLoop() {
 			// we can't use the `for-range` here, because the range loop
 			// caches the variable to be lopped and then it can't be overwritten
 			itv := h.opts.CollectInterval
-			fmt.Printf("[Holmes] collect interval is resetting to [%v]\n", itv) //nolint:forbidigo
+			h.Infof("[Holmes] collect interval is resetting to [%v]\n", itv) //nolint:forbidigo
 			ticker = time.NewTicker(itv)
 
 		default:
@@ -226,7 +226,7 @@ func (h *Holmes) startDumpLoop() {
 			// would be consumed before ticker.C.
 			<-ticker.C
 			if atomic.LoadInt64(&h.stopped) == 1 {
-				fmt.Println("[Holmes] dump loop stopped") //nolint:forbidigo
+				h.Infof("[Holmes] dump loop stopped") //nolint:forbidigo
 				return
 			}
 
@@ -737,16 +737,17 @@ func (h *Holmes) startReporter() {
 			default:
 				evt := <-h.rptEventsCh
 				opts := h.opts.GetReporterOpts()
-				if opts.reporter == nil {
-					h.Errorf("reporter is nil, please initial it before startReporter")
-					// drop the event
-					continue
-				}
-
 				if opts.active == 0 {
 					//drop the event
 					continue
 				}
+
+				if opts.reporter == nil {
+					h.Errorf("profile reporter is nil, please initial it before startReporter")
+					// drop the event
+					continue
+				}
+
 				opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 			}
 		}
