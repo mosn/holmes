@@ -157,8 +157,7 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	o := &options{
-		// TODO: created a default logger that use (os.Stdout).
-		// logger:         stdout,
+		logger:            NewStdLogger(),
 		grOpts:            newGrOptions(),
 		memOpts:           newMemOptions(),
 		gCHeapOpts:        newGCHeapOptions(),
@@ -182,6 +181,7 @@ func newOptions() *options {
 }
 
 // WithLogger set the logger
+// logger can be created by: mlog.GetOrCreateLogger("/path/to/log/file", nil)
 func WithLogger(logger mlog.ErrorLogger) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.logger = logger
