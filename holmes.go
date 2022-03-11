@@ -138,6 +138,18 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 	return h
 }
 
+// EnableShrinkThread enables shrink thread
+func (h *Holmes) EnableShrinkThread() *Holmes {
+	h.opts.ShrinkThrOptions.Enable = true
+	return h
+}
+
+// DisableShrinkThread disables shrink thread
+func (h *Holmes) DisableShrinkThread() *Holmes {
+	h.opts.ShrinkThrOptions.Enable = false
+	return h
+}
+
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {

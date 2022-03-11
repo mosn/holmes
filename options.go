@@ -416,9 +416,8 @@ func WithCGroup(useCGroup bool) Option {
 }
 
 // WithShrinkThread enable/disable shrink thread when the thread number exceed the max threshold.
-func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
+func WithShrinkThread(threshold int, delay time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.ShrinkThrOptions.Enable = enable
 		if threshold > 0 {
 			opts.ShrinkThrOptions.Threshold = threshold
 		}
