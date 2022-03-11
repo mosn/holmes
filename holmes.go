@@ -449,11 +449,10 @@ func (h *Holmes) startShrinkThread() {
 }
 
 func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
-	pType := type2name[thread]
 	match, reason := matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !match {
 		// let user know why this should not dump
-		h.Infof(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", check2name[thread],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
@@ -506,18 +505,17 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 }
 
 func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
-	pType := type2name[cpu]
 	match, reason := matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !match {
 		// let user know why this should not dump
-		h.Infof(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", check2name[cpu],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
 	}
 
-	h.Alertf("holmes.cpu", UniformLogFormat, "pprof dump", type2name[cpu],
+	h.Alertf("holmes.cpu", UniformLogFormat, "pprof dump", check2name[cpu],
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
@@ -545,7 +543,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 			h.Errorf("[holmes reporter] failed to read cpu profile file: %v", err)
 			return true
 		}
-		h.ReportProfile(pType, bfCpy, reason, "")
+		h.ReportProfile(type2name[cpu], bfCpy, reason, "")
 	}
 
 	return true
@@ -650,11 +648,10 @@ func (h *Holmes) getMemoryLimit() (uint64, error) {
 // since the current memory profile will be merged after next GC cycle.
 // And we assume the finalizer will be called before next GC cycle(it will be usually).
 func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
-	pType := type2name[gcHeap]
 	match, reason := matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !force && !match {
 		// let user know why this should not dump
-		h.Infof(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", check2name[gcHeap],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, gc)
@@ -673,7 +670,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 	h.writeProfileDataToFile(buf, gcHeap, eventID)
 
-	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[gcHeap], buf.Bytes(), reason, eventID)
 	return true
 }
 

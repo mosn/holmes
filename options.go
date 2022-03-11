@@ -181,7 +181,7 @@ func newOptions() *options {
 }
 
 // WithLogger set the logger
-// logger can be created by: mlog.GetOrCreateLogger("/path/to/log/file", nil)
+// logger can be created by: NewFileLog("/path/to/log/file", level)
 func WithLogger(logger mlog.ErrorLogger) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.logger = logger
