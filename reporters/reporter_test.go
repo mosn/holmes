@@ -98,6 +98,47 @@ func TestReporter(t *testing.T) {
 	}
 }
 
+func TestReporterReopen(t *testing.T) {
+	grReportCount = 0
+	cpuReportCount = 0
+	r := &mockReporter{}
+	err := h.Set(
+		holmes.WithProfileReporter(r, false),
+		holmes.WithGoroutineDump(5, 10, 20, 90),
+		holmes.WithCPUDump(0, 2, 80),
+		holmes.WithCollectInterval("5s"),
+	)
+	if err != nil {
+		log.Fatalf("fail to set opts on running time.")
+	}
+	go cpuex()
+	time.Sleep(10 * time.Second)
+
+	if grReportCount == 0 {
+		log.Fatalf("not grReport")
+	}
+
+	if cpuReportCount == 0 {
+		log.Fatalf("not cpuReport")
+	}
+
+	// test reopen feature
+	h.DisableProfileReporter()
+
+	h.EnableProfileReporter()
+
+	grReopenReportCount = 0
+	h.Set(
+		holmes.WithProfileReporter(&mockReopenReporter{}, false))
+	time.Sleep(10 * time.Second)
+
+	time.Sleep(5 * time.Second)
+
+	if grReopenReportCount == 0 {
+		log.Fatalf("fail to reopen")
+	}
+}
+
 func cpuex() {
 	go func() {
 		for {
