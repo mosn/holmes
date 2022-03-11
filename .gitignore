@@ -1,5 +1,9 @@
-./.idea/*
+.idea
 
 *.log
 
 ./test_case_gen
+
+vendor
+
+reporters/*.bin

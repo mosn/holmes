@@ -151,7 +151,7 @@ func finalizerCallback(gc *gcHeapFinalizer) {
 	select {
 	case gc.h.finCh <- struct{}{}:
 	default:
-		gc.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
+		gc.h.Errorf("can not send event to finalizer channel immediately, may be analyzer blocked?")
 	}
 }
 
@@ -232,19 +232,19 @@ func (h *Holmes) startDumpLoop() {
 
 			cpuCore, err := h.getCPUCore()
 			if cpuCore == 0 || err != nil {
-				h.logf("[Holmes] get CPU core failed, CPU core: %v, error: %v", cpuCore, err)
+				h.Errorf("[Holmes] get CPU core failed, CPU core: %v, error: %v", cpuCore, err)
 				return
 			}
 
 			memoryLimit, err := h.getMemoryLimit()
 			if memoryLimit == 0 || err != nil {
-				h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
+				h.Errorf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
 				return
 			}
 
 			cpu, mem, gNum, tNum, err := collect(cpuCore, memoryLimit)
 			if err != nil {
-				h.logf(err.Error())
+				h.Errorf("failed to collect resource usage: %v", err.Error())
 
 				continue
 			}
@@ -258,13 +258,13 @@ func (h *Holmes) startDumpLoop() {
 			if h.collectCount < minCollectCyclesBeforeDumpStart {
 				// at least collect some cycles
 				// before start to judge and dump
-				h.logf("[Holmes] warming up cycle : %d", h.collectCount)
+				h.Debugf("[Holmes] warming up cycle : %d", h.collectCount)
 
 				continue
 			}
 
 			if err := h.EnableDump(cpu); err != nil {
-				h.logf("[Holmes] unable to dump: %v", err)
+				h.Infof("[Holmes] unable to dump: %v", err)
 
 				continue
 			}
@@ -289,7 +289,7 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 	}
 
 	if h.grCoolDownTime.After(time.Now()) {
-		h.logf("[Holmes] goroutine dump is in cooldown")
+		h.Debugf("[Holmes] goroutine dump is in cooldown")
 		return
 	}
 	// grOpts is a struct, no escape.
@@ -300,20 +300,24 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 }
 
 func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
-	pType := type2name[goroutine]
 	match, reason := matchRule(h.grNumStats, gNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, c.GoroutineTriggerNumMax)
 	if !match {
-		h.debugf(UniformLogFormat, "NODUMP", type2name[goroutine],
+		h.Infof(UniformLogFormat, "NODUMP", check2name[goroutine],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
 		return false
 	}
 
+	h.Alertf("holmes.goroutine", UniformLogFormat, "pprof ", check2name[goroutine],
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
+		c.GoroutineTriggerNumMax,
+		h.grNumStats.data, gNum)
+
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeGrProfileDataToFile(buf, c, goroutine, gNum)
+	h.writeProfileDataToFile(buf, goroutine, "")
 
-	h.ReportProfile(pType, buf.Bytes(), reason, "")
+	h.ReportProfile(type2name[goroutine], buf.Bytes(), reason, "")
 	return true
 }
 
@@ -328,7 +332,7 @@ func (h *Holmes) memCheckAndDump(mem int) {
 	}
 
 	if h.memCoolDownTime.After(time.Now()) {
-		h.logf("[Holmes] mem dump is in cooldown")
+		h.Debugf("[Holmes] mem dump is in cooldown")
 		return
 	}
 	// memOpts is a struct, no escape.
@@ -339,23 +343,26 @@ func (h *Holmes) memCheckAndDump(mem int) {
 }
 
 func (h *Holmes) memProfile(rss int, c typeOption) bool {
-	pType := type2name[mem]
 	match, reason := matchRule(h.memStats, rss, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", check2name[mem],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.memStats.data, rss)
 
 		return false
 	}
 
+	h.Alertf("holmes.memory", UniformLogFormat, "pprof", check2name[mem],
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
+		NotSupportTypeMaxConfig, h.memStats, rss)
+
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
-	h.writeProfileDataToFile(buf, c, mem, rss, h.memStats, "")
+	h.writeProfileDataToFile(buf, mem, "")
 
-	h.ReportProfile(pType, buf.Bytes(), reason, "")
+	h.ReportProfile(type2name[mem], buf.Bytes(), reason, "")
 	return true
 }
 
@@ -371,10 +378,17 @@ func (h *Holmes) threadCheckAndShrink(threadNum int) {
 	}
 
 	if threadNum > opts.Threshold {
-		// 100x Delay time a cooldown time
-		h.shrinkThrCoolDownTime = time.Now().Add(opts.Delay * 100)
+		// 100x Delay time a cooldown time as default
+		delay := opts.Delay * 100
+		// one hour at least
+		if delay < time.Hour {
+			delay = time.Hour
+		}
+		h.shrinkThrCoolDownTime = time.Now().Add(delay)
 
-		h.logf("current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
+		h.Alertf("holmes.thread", "current thread number(%v) larger than threshold(%v), will start to shrink thread after %v", threadNum, opts.Threshold, opts.Delay)
+
+		// do not shrink thread immediately
 		time.AfterFunc(opts.Delay, func() {
 			h.startShrinkThread()
 		})
@@ -393,11 +407,12 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	}
 
 	if h.threadCoolDownTime.After(time.Now()) {
-		h.logf("[Holmes] thread dump is in cooldown")
+		h.Debugf("[Holmes] thread dump is in cooldown")
 		return
 	}
 	// threadOpts is a struct, no escape.
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
+		// TODO: use thread coolDown time.
 		h.threadCoolDownTime = time.Now().Add(coolDown)
 		h.threadTriggerCount++
 	}
@@ -414,7 +429,7 @@ func (h *Holmes) startShrinkThread() {
 	// check again after the timer triggered
 	if opts.Enable && n > 0 {
 		h.shrinkThreadTriggerCount++
-		h.logf("start to shrink %v threads, now: %v", n, curThreadNum)
+		h.Infof("[holmes] start to shrink %v threads, now: %v", n, curThreadNum)
 
 		var wg sync.WaitGroup
 		wg.Add(n)
@@ -429,7 +444,7 @@ func (h *Holmes) startShrinkThread() {
 		}
 		wg.Wait()
 
-		h.logf("finished shrink threads, now: %v", getThreadNum())
+		h.Infof("[holmes] finished shrink threads, now: %v", getThreadNum())
 	}
 }
 
@@ -438,27 +453,30 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 	match, reason := matchRule(h.threadStats, curThreadNum, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.threadStats.data, curThreadNum)
 
 		return false
 	}
 
-	eventID := fmt.Sprintf("thr-%d", h.threadTriggerCount)
+	h.Alertf("holmes.thread", UniformLogFormat, "pprof", check2name[thread],
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
+		NotSupportTypeMaxConfig, h.threadStats, curThreadNum)
 
+	eventID := fmt.Sprintf("thr-%d", h.threadTriggerCount)
 	var buf bytes.Buffer
 
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, c, thread, curThreadNum, h.threadStats, eventID)
+	h.writeProfileDataToFile(buf, thread, eventID)
 
-	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[thread], buf.Bytes(), reason, eventID)
 
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, c, goroutine, curThreadNum, h.threadStats, eventID)
+	h.writeProfileDataToFile(buf, goroutine, eventID)
 
-	h.ReportProfile("goroutine", buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[goroutine], buf.Bytes(), reason, eventID)
 
 	return true
 }
@@ -477,7 +495,7 @@ func (h *Holmes) cpuCheckAndDump(cpu int) {
 	}
 
 	if h.cpuCoolDownTime.After(time.Now()) {
-		h.logf("[Holmes] cpu dump is in cooldown")
+		h.Debugf("[Holmes] cpu dump is in cooldown")
 		return
 	}
 	// cpuOpts is a struct, no escape.
@@ -492,39 +510,39 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 	match, reason := matchRule(h.cpuStats, curCPUUsage, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 			h.cpuStats.data, curCPUUsage)
 
 		return false
 	}
 
+	h.Alertf("holmes.cpu", UniformLogFormat, "pprof dump", type2name[cpu],
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
+		h.cpuStats.data, curCPUUsage)
+
 	binFileName := getBinaryFileName(h.opts.DumpPath, cpu, "")
 
 	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
 	if err != nil {
-		h.logf("[Holmes] failed to create cpu profile file: %v", err.Error())
+		h.Errorf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false
 	}
 	defer bf.Close() // nolint: errcheck
 
 	err = pprof.StartCPUProfile(bf)
 	if err != nil {
-		h.logf("[Holmes] failed to profile cpu: %v", err.Error())
+		h.Errorf("[Holmes] failed to profile cpu: %v", err.Error())
 		return false
 	}
 
 	time.Sleep(defaultCPUSamplingTime)
 	pprof.StopCPUProfile()
 
-	h.logf(UniformLogFormat, "pprof dump to log dir", type2name[cpu],
-		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
-		h.cpuStats.data, curCPUUsage)
-
 	if opts := h.opts.GetReporterOpts(); opts.active == 1 {
 		bfCpy, err := ioutil.ReadFile(binFileName)
 		if err != nil {
-			h.logf("fail to build copy of bf, err %v", err)
+			h.Errorf("[holmes reporter] failed to read cpu profile file: %v", err)
 			return true
 		}
 		h.ReportProfile(pType, bfCpy, reason, "")
@@ -567,7 +585,7 @@ func (h *Holmes) gcHeapCheckAndDump() {
 
 	memoryLimit, err := h.getMemoryLimit()
 	if memoryLimit == 0 || err != nil {
-		h.logf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
+		h.Errorf("[Holmes] get memory limit failed, memory limit: %v, error: %v", memoryLimit, err)
 		return
 	}
 
@@ -578,12 +596,12 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	if h.gcCycleCount < minCollectCyclesBeforeDumpStart {
 		// at least collect some cycles
 		// before start to judge and dump
-		h.logf("[Holmes] GC cycle warming up : %d", h.gcCycleCount)
+		h.Debugf("[Holmes] GC cycle warming up : %d", h.gcCycleCount)
 		return
 	}
 
 	if h.gcHeapCoolDownTime.After(time.Now()) {
-		h.logf("[Holmes] GC heap dump is in cooldown")
+		h.Debugf("[Holmes] GC heap dump is in cooldown")
 		return
 	}
 
@@ -636,7 +654,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 	match, reason := matchRule(h.gcHeapStats, gc, c.TriggerMin, c.TriggerAbs, c.TriggerDiff, NotSupportTypeMaxConfig)
 	if !force && !match {
 		// let user know why this should not dump
-		h.debugf(UniformLogFormat, "NODUMP", pType,
+		h.Infof(UniformLogFormat, "NODUMP", pType,
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			NotSupportTypeMaxConfig,
 			h.gcHeapStats.data, gc)
@@ -644,44 +662,33 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 		return false
 	}
 
+	h.Alertf("holmes.gcheap", UniformLogFormat, "pprof", check2name[gcHeap],
+		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
+		NotSupportTypeMaxConfig, h.gcHeapStats, gc)
+
 	// gcTriggerCount only increased after got both two profiles
 	eventID := fmt.Sprintf("heap-%d", h.grTriggerCount)
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, c, gcHeap, gc, h.gcHeapStats, eventID)
+	h.writeProfileDataToFile(buf, gcHeap, eventID)
 
 	h.ReportProfile(pType, buf.Bytes(), reason, eventID)
 	return true
 }
 
-func (h *Holmes) writeGrProfileDataToFile(data bytes.Buffer, opts grOptions, dumpType configureType, currentStat int) {
-	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
-		opts.GoroutineTriggerNumMax,
-		h.grNumStats.data, currentStat)
-
-	if err := writeFile(data, dumpType, h.opts.DumpOptions, ""); err != nil {
-		h.logf("%s", err.Error())
-	}
-}
-
-func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, opts typeOption, dumpType configureType, currentStat int, ringStats ring, eventID string) {
-	h.logf(UniformLogFormat, "pprof", type2name[dumpType],
-		opts.TriggerMin, opts.TriggerDiff, opts.TriggerAbs,
-		NotSupportTypeMaxConfig, ringStats, currentStat)
-
+func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, eventID string) {
 	if err := writeFile(data, dumpType, h.opts.DumpOptions, eventID); err != nil {
-		h.logf("%s", err.Error())
+		h.Errorf("failed to write profile to file: %s", err.Error())
 	}
 }
 
 func (h *Holmes) initEnvironment() {
 	// whether the max memory is limited by cgroup
 	if h.opts.UseCGroup {
-		h.logf("[Holmes] use cgroup to limit memory")
+		h.Infof("[Holmes] use cgroup to limit memory")
 	} else {
-		h.logf("[Holmes] use the default memory percent calculated by gopsutil")
+		h.Infof("[Holmes] use the default memory percent calculated by gopsutil")
 	}
 }
 
@@ -728,13 +735,13 @@ func (h *Holmes) startReporter() {
 		for {
 			select {
 			case <-h.rptCancelCh:
-				h.logf("stop reporter background goroutine")
+				h.Infof("stop reporter background goroutine")
 				return
 			default:
 				evt := <-h.rptEventsCh
 				opts := h.opts.GetReporterOpts()
 				if opts.reporter == nil {
-					h.logf("reporter is nil, please initial it before startReporter")
+					h.Errorf("reporter is nil, please initial it before startReporter")
 					// drop the event
 					continue
 				}

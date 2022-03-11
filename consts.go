@@ -62,6 +62,14 @@ var type2name = map[configureType]string{
 	gcHeap:    "heap",
 }
 
+var check2name = map[configureType]string{
+	mem:       "mem",
+	cpu:       "cpu",
+	thread:    "thread",
+	goroutine: "goroutine",
+	gcHeap:    "GCHeap",
+}
+
 const (
 	cgroupMemLimitPath  = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
 	cgroupCpuQuotaPath  = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
@@ -69,35 +77,6 @@ const (
 )
 
 const minCollectCyclesBeforeDumpStart = 10
-
-type Lever int8
-
-const (
-	LogLevelDebug Lever = iota
-	LogLevelInfo
-	LogLevelWarn
-	LogLevelError
-)
-
-var m = map[Lever]string{
-	LogLevelDebug: "[Debug]",
-	LogLevelInfo:  "[Info]",
-	LogLevelWarn:  "[Warn]",
-	LogLevelError: "[Error]",
-}
-
-// Allow 允许是否可以打印
-func (l Lever) Allow(lv Lever) bool {
-	return lv >= l
-}
-
-// String 语义转义
-func (l Lever) String() string {
-	if v, ok := m[l]; ok {
-		return v
-	}
-	return "UNKNOWN"
-}
 
 const (
 	// TrimResultTopN trimResult return only reserve the top n.
