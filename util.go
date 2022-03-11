@@ -182,7 +182,7 @@ func getBinaryFileName(filePath string, dumpType configureType, eventID string) 
 
 func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) (string, error) {
 	var buf []byte
-	if dumpOpts.DumpProfileType == textDump && dumpOpts.DumpFullStack {
+	if dumpOpts.DumpProfileType == textDump && !dumpOpts.DumpFullStack {
 		switch dumpType {
 		case mem, gcHeap, goroutine:
 			buf = trimResultTop(data)
