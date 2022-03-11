@@ -167,9 +167,9 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 }
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
-	binarySuffix := time.Now().Format("20060102150405.000") + ".bin"
+	suffix := time.Now().Format("20060102150405.000") + ".log"
 
-	return path.Join(filePath, type2name[dumpType]+"."+eventID+"."+binarySuffix)
+	return path.Join(filePath, check2name[dumpType]+"."+eventID+"."+suffix)
 }
 
 func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) error {

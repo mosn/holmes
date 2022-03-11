@@ -1,18 +1,15 @@
 package holmes
 
 import (
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
+	mlog "mosn.io/pkg/log"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/docker/go-units"
 )
 
 type options struct {
+	logger mlog.ErrorLogger
+
 	UseGoProcAsCPUCore bool // use the go max procs number as the CPU core number when it's true
 	UseCGroup          bool // use the CGroup to calc cpu/memory when it's true
 
@@ -23,12 +20,6 @@ type options struct {
 	*ShrinkThrOptions
 
 	*DumpOptions
-
-	LogLevel Lever
-
-	// Logger Logger
-	Logger     Logger
-	loggerLock sync.RWMutex
 
 	// interval for dump loop, default 5s
 	CollectInterval   time.Duration
@@ -166,13 +157,12 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	o := &options{
-		Logger:            NewStdLogger(),
+		logger:            NewStdLogger(),
 		grOpts:            newGrOptions(),
 		memOpts:           newMemOptions(),
 		gCHeapOpts:        newGCHeapOptions(),
 		cpuOpts:           newCPUOptions(),
 		threadOpts:        newThreadOptions(),
-		LogLevel:          LogLevelDebug,
 		CollectInterval:   defaultInterval,
 		intervalResetting: make(chan struct{}, 1),
 		CoolDown:          defaultCooldown,
@@ -188,6 +178,15 @@ func newOptions() *options {
 		rptOpts: newReporterOpts(),
 	}
 	return o
+}
+
+// WithLogger set the logger
+// logger can be created by: NewFileLog("/path/to/log/file", level)
+func WithLogger(logger mlog.ErrorLogger) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.logger = logger
+		return
+	})
 }
 
 // WithDumpPath set the dump path for holmes.
@@ -414,100 +413,6 @@ func WithCGroup(useCGroup bool) Option {
 		opts.UseCGroup = useCGroup
 		return
 	})
-}
-
-func WithLoggerLevel(level Lever) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.LogLevel = level
-		return
-	})
-}
-
-func WithLogger(logger Logger) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.loggerLock.Lock()
-		defer opts.loggerLock.Unlock()
-		oldLogger := opts.Logger
-		if oldLogger != nil {
-			switch lg := oldLogger.(type) {
-			case *fileLogger:
-				old := lg.file.Load()
-				if old != nil {
-					oldFd, ok := old.(*os.File)
-					if !ok {
-						//nolint
-						fmt.Println("[Holmes] assert fault, expecting *os.File")
-						return
-					}
-					_ = oldFd.Close()
-				}
-
-			}
-		}
-		opts.Logger = logger
-		return
-	})
-}
-
-// NewFileLog init logger
-// shardLoggerSize eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
-func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, loginfo ...string) Logger {
-	f := &fileLogger{
-		rotateEnable:            rotateEnable,
-		splitLoggerSizeToString: shardLoggerSize,
-		file:                    atomic.Value{},
-	}
-
-	if rotateEnable {
-		parseShardLoggerSize, err := units.FromHumanSize(shardLoggerSize)
-		if err != nil || (err == nil && parseShardLoggerSize <= 0) {
-			f.splitLoggerSize = defaultShardLoggerSize
-		} else {
-			f.splitLoggerSize = parseShardLoggerSize
-		}
-	}
-
-	filePath := path.Join(dumpPath, defaultLoggerName)
-	if len(loginfo) > 0 {
-		filePath = dumpPath + "/" + path.Join(loginfo...)
-	}
-
-	f.dumpPath = filepath.Dir(filePath)
-
-	var (
-		logObj *os.File
-		err    error
-	)
-
-	logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
-	if err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(f.dumpPath, 0755); err != nil {
-			//nolint
-			fmt.Println("mkdir err", err)
-			return nil
-		}
-
-		logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
-		if err != nil {
-			//nolint
-			fmt.Println("open file err", err)
-			return nil
-		}
-	}
-
-	if err != nil {
-		//nolint
-		fmt.Println("unexpected err", err)
-		return nil
-	}
-
-	f.file.Store(logObj)
-	return f
-}
-
-// NewStdLogger default std logger
-func NewStdLogger() Logger {
-	return &stdLog{os.Stdout}
 }
 
 // WithShrinkThread enable/disable shrink thread when the thread number exceed the max threshold.

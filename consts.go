@@ -54,12 +54,22 @@ const (
 	gcHeap
 )
 
+// check type to profile name, just align to pprof
 var type2name = map[configureType]string{
-	mem:       "mem",
+	mem:       "heap",
 	cpu:       "cpu",
 	thread:    "threadcreate",
 	goroutine: "goroutine",
 	gcHeap:    "heap",
+}
+
+// check type to check name
+var check2name = map[configureType]string{
+	mem:       "mem",
+	cpu:       "cpu",
+	thread:    "thread",
+	goroutine: "goroutine",
+	gcHeap:    "GCHeap",
 }
 
 const (
@@ -69,35 +79,6 @@ const (
 )
 
 const minCollectCyclesBeforeDumpStart = 10
-
-type Lever int8
-
-const (
-	LogLevelDebug Lever = iota
-	LogLevelInfo
-	LogLevelWarn
-	LogLevelError
-)
-
-var m = map[Lever]string{
-	LogLevelDebug: "[Debug]",
-	LogLevelInfo:  "[Info]",
-	LogLevelWarn:  "[Warn]",
-	LogLevelError: "[Error]",
-}
-
-// Allow 允许是否可以打印
-func (l Lever) Allow(lv Lever) bool {
-	return lv >= l
-}
-
-// String 语义转义
-func (l Lever) String() string {
-	if v, ok := m[l]; ok {
-		return v
-	}
-	return "UNKNOWN"
-}
 
 const (
 	// TrimResultTopN trimResult return only reserve the top n.

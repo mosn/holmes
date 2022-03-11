@@ -1,6 +1,7 @@
 package main
 
 import (
+	mlog "mosn.io/pkg/log"
 	"net/http"
 	"time"
 
@@ -17,7 +18,7 @@ func main() {
 		holmes.WithCollectInterval("2s"),
 		holmes.WithCoolDown("1m"),
 		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp", false, "")),
+		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
 		holmes.WithCPUDump(20, 25, 80),
 	)
 	h.EnableCPUDump().Start()
