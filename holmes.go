@@ -50,7 +50,7 @@ type Holmes struct {
 	// lock Protect the following
 	sync.Mutex
 	// channel for GC sweep finalizer event
-	finCh chan struct{}
+	gcEventsCh chan struct{}
 	// profiler reporter channels
 	rptEventsCh chan rptEvent
 }
@@ -136,22 +136,59 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 	return h
 }
 
+// getGcEventCh get gcEventsCh
+func (h *Holmes) getGcEventCh() chan struct{} {
+	h.Lock()
+	defer h.Unlock()
+	return h.gcEventsCh
+}
+
+// setGcEventCh set gcEventsCh
+func (h *Holmes) setGcEventCh(ch chan struct{}) {
+	h.Lock()
+	defer h.Unlock()
+	h.gcEventsCh = ch
+}
+
+// getRptEventsCh get rptEventsCh
+func (h *Holmes) getRptEventsCh() chan rptEvent {
+	h.Lock()
+	defer h.Unlock()
+	return h.rptEventsCh
+}
+
+// setRptEventsCh set rptEventsCh
+func (h *Holmes) setRptEventsCh(ch chan rptEvent) {
+	h.Lock()
+	defer h.Unlock()
+	h.rptEventsCh = ch
+}
+
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
+	ch := gc.h.getGcEventCh()
+	if ch == nil {
+		return
+	}
+
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
-		gc.h.Lock()
-		if gc.h.finCh != nil {
-			close(gc.h.finCh)
+		if ch != nil {
+			close(gc.h.gcEventsCh)
+			gc.h.setGcEventCh(nil)
 		}
-		gc.h.Unlock()
 		return
 	}
 
 	// register the finalizer again
 	runtime.SetFinalizer(gc, finalizerCallback)
 
+	ch = gc.h.getGcEventCh()
+	if ch == nil {
+		return
+	}
+
 	select {
-	case gc.h.finCh <- struct{}{}:
+	case ch <- struct{}{}:
 	default:
 		gc.h.logf("can not send event to finalizer channel immediately, may be analyzer blocked?")
 	}
@@ -163,9 +200,7 @@ type gcHeapFinalizer struct {
 }
 
 func (h *Holmes) startGCCycleLoop() {
-	h.Lock()
-	h.finCh = make(chan struct{}, 1)
-	h.Unlock()
+	h.setGcEventCh(make(chan struct{}, 1))
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	gc := &gcHeapFinalizer{
@@ -538,17 +573,11 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 }
 
 func (h *Holmes) gcHeapCheckLoop() {
-	for {
-		// wait for the finalizer event
-		_, ok := <-h.finCh
-		if !ok {
-			// close finish
-			h.Lock()
-			h.finCh = nil
-			h.Unlock()
-			return
-		}
-
+	ch := h.getGcEventCh()
+	if ch == nil {
+		return
+	}
+	for _ = range ch {
 		h.gcHeapCheckAndDump()
 	}
 }
@@ -726,12 +755,15 @@ func (h *Holmes) EnableProfileReporter() {
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
+	ch := h.getRptEventsCh()
+	if ch == nil {
+		return
+	}
 	if atomic.LoadInt64(&h.stopped) == 1 {
-		h.Lock()
-		if h.rptEventsCh != nil {
+		if ch != nil {
 			close(h.rptEventsCh)
+			h.setRptEventsCh(nil)
 		}
-		h.Unlock()
 		return
 	}
 
@@ -739,10 +771,15 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 	if opts.active == 0 {
 		return
 	}
+	ch = h.getRptEventsCh()
+	if ch == nil {
+		return
+	}
+
 	if h.opts.rptOpts.allowDiscarding {
 		select {
 		// Attempt to send
-		case h.rptEventsCh <- rptEvent{
+		case ch <- rptEvent{
 			pType,
 			buf,
 			reason,
@@ -752,7 +789,7 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 		return
 	}
 	// Waiting to be sent
-	h.rptEventsCh <- rptEvent{
+	ch <- rptEvent{
 		pType,
 		buf,
 		reason,
@@ -763,11 +800,13 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
-	h.Lock()
-	h.rptEventsCh = make(chan rptEvent, 32)
-	h.Unlock()
+	h.setRptEventsCh(make(chan rptEvent, 32))
 	go func() {
-		for evt := range h.rptEventsCh {
+		ch := h.getRptEventsCh()
+		if ch == nil {
+			return
+		}
+		for evt := range ch {
 			opts := h.opts.GetReporterOpts()
 			if opts.reporter == nil {
 				h.logf("reporter is nil, please initial it before startReporter")
@@ -780,9 +819,5 @@ func (h *Holmes) startReporter() {
 				h.logf("reporter err:", err)
 			}
 		}
-		// rptEventsCh is close
-		h.Lock()
-		h.rptEventsCh = nil
-		h.Unlock()
 	}()
 }
