@@ -26,10 +26,6 @@ type Holmes struct {
 	gcHeapTriggerCount       int
 	shrinkThreadTriggerCount int
 
-	// channel for GC sweep finalizer event
-	finChLock sync.Mutex
-	finCh     chan struct{}
-
 	// cooldown
 	threadCoolDownTime    time.Time
 	cpuCoolDownTime       time.Time
@@ -51,9 +47,12 @@ type Holmes struct {
 	// switch
 	stopped int64
 
+	// lock Protect the following
+	sync.Mutex
+	// channel for GC sweep finalizer event
+	finCh chan struct{}
 	// profiler reporter channels
-	rptEventsChLock sync.Mutex
-	rptEventsCh     chan rptEvent
+	rptEventsCh chan rptEvent
 }
 
 type ProfileReporter interface {
@@ -140,11 +139,11 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
-		gc.h.finChLock.Lock()
+		gc.h.Lock()
 		if gc.h.finCh != nil {
 			close(gc.h.finCh)
 		}
-		gc.h.finChLock.Unlock()
+		gc.h.Unlock()
 		return
 	}
 
@@ -164,9 +163,9 @@ type gcHeapFinalizer struct {
 }
 
 func (h *Holmes) startGCCycleLoop() {
-	h.finChLock.Lock()
+	h.Lock()
 	h.finCh = make(chan struct{}, 1)
-	h.finChLock.Unlock()
+	h.Unlock()
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	gc := &gcHeapFinalizer{
@@ -544,9 +543,9 @@ func (h *Holmes) gcHeapCheckLoop() {
 		_, ok := <-h.finCh
 		if !ok {
 			// close finish
-			h.finChLock.Lock()
+			h.Lock()
 			h.finCh = nil
-			h.finChLock.Unlock()
+			h.Unlock()
 			return
 		}
 
@@ -728,11 +727,11 @@ func (h *Holmes) EnableProfileReporter() {
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
 	if atomic.LoadInt64(&h.stopped) == 1 {
-		h.rptEventsChLock.Lock()
+		h.Lock()
 		if h.rptEventsCh != nil {
 			close(h.rptEventsCh)
 		}
-		h.rptEventsChLock.Unlock()
+		h.Unlock()
 		return
 	}
 
@@ -764,9 +763,9 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter() {
-	h.rptEventsChLock.Lock()
+	h.Lock()
 	h.rptEventsCh = make(chan rptEvent, 32)
-	h.rptEventsChLock.Unlock()
+	h.Unlock()
 	go func() {
 		for evt := range h.rptEventsCh {
 			opts := h.opts.GetReporterOpts()
@@ -782,8 +781,8 @@ func (h *Holmes) startReporter() {
 			}
 		}
 		// rptEventsCh is close
-		h.rptEventsChLock.Lock()
+		h.Lock()
 		h.rptEventsCh = nil
-		h.rptEventsChLock.Unlock()
+		h.Unlock()
 	}()
 }
