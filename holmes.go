@@ -605,6 +605,8 @@ func (h *Holmes) gcHeapCheckLoop() {
 	if ch == nil {
 		return
 	}
+
+	//nolint
 	for _ = range ch {
 		h.gcHeapCheckAndDump()
 	}
