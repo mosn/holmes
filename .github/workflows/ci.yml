@@ -28,5 +28,8 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v1
 
-      - name: holmes_test.go
+      - name: holmes test
         run: make test
+
+      - name: example
+        run: make example

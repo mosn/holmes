@@ -46,7 +46,7 @@ func readUint(path string) (uint64, error) {
 }
 
 // only reserve the top n.
-func trimResult(buffer bytes.Buffer) string {
+func trimResultTop(buffer bytes.Buffer) []byte {
 	index := TrimResultTopN
 	arr := strings.SplitN(buffer.String(), "\n\n", TrimResultTopN+1)
 
@@ -54,7 +54,15 @@ func trimResult(buffer bytes.Buffer) string {
 		index = len(arr) - 1
 	}
 
-	return strings.Join(arr[:index], "\n\n")
+	return []byte(strings.Join(arr[:index], "\n\n"))
+}
+
+// only reserve the front n bytes
+func trimResultFront(buffer bytes.Buffer) []byte {
+	if buffer.Len() <= TrimResultMaxBytes {
+		return buffer.Bytes()
+	}
+	return buffer.Bytes()[:TrimResultMaxBytes-1]
 }
 
 // return values:
@@ -167,31 +175,36 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 }
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
-	binarySuffix := time.Now().Format("20060102150405.000") + ".bin"
+	suffix := time.Now().Format("20060102150405.000") + ".log"
 
-	return path.Join(filePath, type2name[dumpType]+"."+eventID+"."+binarySuffix)
+	return path.Join(filePath, check2name[dumpType]+"."+eventID+"."+suffix)
 }
 
-func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) error {
-	if dumpOpts.DumpProfileType == textDump {
-		// write to log
-		if dumpOpts.DumpFullStack {
-			res := trimResult(data)
-			return fmt.Errorf(res) // nolint:goerr113
+func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) (string, error) {
+	var buf []byte
+	if dumpOpts.DumpProfileType == textDump && !dumpOpts.DumpFullStack {
+		switch dumpType {
+		case mem, gcHeap, goroutine:
+			buf = trimResultTop(data)
+		case thread:
+			buf = trimResultFront(data)
+		default:
+			buf = data.Bytes()
 		}
-		return fmt.Errorf(data.String())
+	} else {
+		buf = data.Bytes()
 	}
 
-	binFileName := getBinaryFileName(dumpOpts.DumpPath, dumpType, eventID)
+	fileName := getBinaryFileName(dumpOpts.DumpPath, dumpType, eventID)
 
-	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
+	file, err := os.OpenFile(fileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
 	if err != nil {
-		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
+		return fileName, fmt.Errorf("pprof %v open file failed : %w", type2name[dumpType], err)
 	}
-	defer bf.Close() //nolint:errcheck,gosec
+	defer file.Close() //nolint:errcheck,gosec
 
-	if _, err = bf.Write(data.Bytes()); err != nil {
-		return fmt.Errorf("[Holmes] pprof %v write to file failed : %w", type2name[dumpType], err)
+	if _, err = file.Write(buf); err != nil {
+		return fileName, fmt.Errorf("pprof %v write to file failed : %w", type2name[dumpType], err)
 	}
-	return nil
+	return fileName, nil
 }

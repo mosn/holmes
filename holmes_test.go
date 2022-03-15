@@ -13,9 +13,8 @@ func TestMain(m *testing.M) {
 	log.Println("holmes initialing")
 	h, _ = New(
 		WithCollectInterval("1s"),
-		WithCoolDown("1s"),
 		WithTextDump(),
-		WithGoroutineDump(10, 25, 80, 90),
+		WithGoroutineDump(10, 25, 80, 90, time.Minute),
 	)
 	log.Println("holmes initial success")
 	h.EnableGoroutineDump().Start()
@@ -46,7 +45,7 @@ func TestSetGrOpts(t *testing.T) {
 	before := h.grCoolDownTime
 
 	err := h.Set(
-		WithGoroutineDump(min, diff, abs, 90))
+		WithGoroutineDump(min, diff, abs, 90, time.Minute))
 	if err != nil {
 		log.Fatalf("fail to set opts on running time.")
 	}
@@ -106,10 +105,11 @@ func TestWithShrinkThread(t *testing.T) {
 
 	err := h.Set(
 		// delay 5 seconds, after the 50 threads unlocked
-		WithShrinkThread(true, 20, time.Second*5),
-		WithThreadDump(10, 10, 10),
+		WithThreadDump(10, 10, 10, time.Minute),
+		WithShrinkThread(20, time.Second*5),
 		WithCollectInterval("1s"),
 	)
+	h.EnableShrinkThread()
 	if err != nil {
 		log.Fatalf("fail to set opts on running time.")
 	}
@@ -136,7 +136,5 @@ func TestWithShrinkThread(t *testing.T) {
 		log.Fatalf("shrink thread failed, before: %v, now: %v", threadNum2, threadNum3)
 	}
 
-	h.Set(
-		WithShrinkThread(false, 20, time.Second*5),
-	)
+	h.DisableShrinkThread()
 }

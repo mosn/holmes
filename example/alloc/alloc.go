@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	mlog "mosn.io/pkg/log"
 	"net/http"
 	"time"
 
@@ -16,11 +17,10 @@ func init() {
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCollectInterval("2s"),
-		holmes.WithCoolDown("1m"),
 		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp", false, "")),
+		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
 		holmes.WithTextDump(),
-		holmes.WithMemDump(3, 25, 80),
+		holmes.WithMemDump(3, 25, 80, time.Minute),
 	)
 	h.EnableMemDump().Start()
 	time.Sleep(time.Hour)

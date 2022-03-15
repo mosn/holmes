@@ -1,18 +1,15 @@
 package holmes
 
 import (
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
+	mlog "mosn.io/pkg/log"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/docker/go-units"
 )
 
 type options struct {
+	logger mlog.ErrorLogger
+
 	UseGoProcAsCPUCore bool // use the go max procs number as the CPU core number when it's true
 	UseCGroup          bool // use the CGroup to calc cpu/memory when it's true
 
@@ -24,23 +21,9 @@ type options struct {
 
 	*DumpOptions
 
-	LogLevel Lever
-
-	// Logger Logger
-	Logger     Logger
-	loggerLock sync.RWMutex
-
 	// interval for dump loop, default 5s
 	CollectInterval   time.Duration
 	intervalResetting chan struct{}
-
-	// the cooldown time after every type of dump
-	// interval for cooldown，default 1m
-	// the cpu/mem/goroutine have different cooldowns of their own
-
-	// todo should we move CoolDown into Gr/CPU/MEM/GCheap Opts and support
-	// set different `CoolDown` for different opts?
-	CoolDown time.Duration
 
 	// if current cpu usage percent is greater than CPUMaxPercent,
 	// holmes would not dump all types profile, cuz this
@@ -50,6 +33,10 @@ type options struct {
 	// if write lock is held mean holmes's
 	// configuration is being modified.
 	L *sync.RWMutex
+
+	// the cooldown time after every type of dump
+	// interval for cooldown，default 1m
+	// each check type have different cooldowns of their own
 
 	grOpts *grOptions
 
@@ -166,16 +153,14 @@ func (f optionFunc) apply(opts *options) error {
 
 func newOptions() *options {
 	o := &options{
-		Logger:            NewStdLogger(),
+		logger:            NewStdLogger(),
 		grOpts:            newGrOptions(),
 		memOpts:           newMemOptions(),
 		gCHeapOpts:        newGCHeapOptions(),
 		cpuOpts:           newCPUOptions(),
 		threadOpts:        newThreadOptions(),
-		LogLevel:          LogLevelDebug,
 		CollectInterval:   defaultInterval,
 		intervalResetting: make(chan struct{}, 1),
-		CoolDown:          defaultCooldown,
 		DumpOptions: &DumpOptions{
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
@@ -188,6 +173,15 @@ func newOptions() *options {
 		rptOpts: newReporterOpts(),
 	}
 	return o
+}
+
+// WithLogger set the logger
+// logger can be created by: NewFileLog("/path/to/log/file", level)
+func WithLogger(logger mlog.ErrorLogger) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.logger = logger
+		return
+	})
 }
 
 // WithDumpPath set the dump path for holmes.
@@ -212,15 +206,6 @@ func WithCollectInterval(interval string) Option {
 		opts.CollectInterval = newInterval
 		opts.intervalResetting <- struct{}{}
 
-		return
-	})
-}
-
-// WithCoolDown : coolDown must be valid time duration string,
-// eg. "ns", "us" (or "µs"), "ms", "s", "m", "h".
-func WithCoolDown(coolDown string) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.CoolDown, err = time.ParseDuration(coolDown)
 		return
 	})
 }
@@ -270,14 +255,16 @@ func newGrOptions() *grOptions {
 	base := newTypeOpts(
 		defaultGoroutineTriggerMin,
 		defaultGoroutineTriggerAbs,
-		defaultGoroutineTriggerDiff)
+		defaultGoroutineTriggerDiff,
+		defaultGoroutineCoolDown,
+	)
 	return &grOptions{typeOption: base}
 }
 
 // WithGoroutineDump set the goroutine dump options.
-func WithGoroutineDump(min int, diff int, abs int, max int) Option {
+func WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.grOpts.Set(min, abs, diff)
+		opts.grOpts.Set(min, abs, diff, coolDown)
 		opts.grOpts.GoroutineTriggerNumMax = max
 		return
 	})
@@ -293,19 +280,23 @@ type typeOption struct {
 
 	// mem/cpu/gcheap/goroutine/thread trigger diff in percent
 	TriggerDiff int
+
+	// CoolDown skip profile for CoolDown time after done a profile
+	CoolDown time.Duration
 }
 
-func newTypeOpts(triggerMin, triggerAbs, triggerDiff int) *typeOption {
+func newTypeOpts(triggerMin, triggerAbs, triggerDiff int, coolDown time.Duration) *typeOption {
 	return &typeOption{
 		Enable:      false,
 		TriggerMin:  triggerMin,
 		TriggerAbs:  triggerAbs,
 		TriggerDiff: triggerDiff,
+		CoolDown:    coolDown,
 	}
 }
 
-func (base *typeOption) Set(min, abs, diff int) {
-	base.TriggerMin, base.TriggerAbs, base.TriggerDiff = min, abs, diff
+func (base *typeOption) Set(min, abs, diff int, coolDown time.Duration) {
+	base.TriggerMin, base.TriggerAbs, base.TriggerDiff, base.CoolDown = min, abs, diff, coolDown
 }
 
 // newMemOptions
@@ -316,13 +307,15 @@ func newMemOptions() *typeOption {
 	return newTypeOpts(
 		defaultMemTriggerMin,
 		defaultMemTriggerAbs,
-		defaultMemTriggerDiff)
+		defaultMemTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithMemDump set the memory dump options.
-func WithMemDump(min int, diff int, abs int) Option {
+func WithMemDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.memOpts.Set(min, abs, diff)
+		opts.memOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -336,13 +329,15 @@ func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
 		defaultGCHeapTriggerMin,
 		defaultGCHeapTriggerAbs,
-		defaultGCHeapTriggerDiff)
+		defaultGCHeapTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithGCHeapDump set the GC heap dump options.
-func WithGCHeapDump(min int, diff int, abs int) Option {
+func WithGCHeapDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.gCHeapOpts.Set(min, abs, diff)
+		opts.gCHeapOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -368,13 +363,15 @@ func newThreadOptions() *typeOption {
 	return newTypeOpts(
 		defaultThreadTriggerMin,
 		defaultThreadTriggerAbs,
-		defaultThreadTriggerDiff)
+		defaultThreadTriggerDiff,
+		defaultThreadCoolDown,
+	)
 }
 
 // WithThreadDump set the thread dump options.
-func WithThreadDump(min, diff, abs int) Option {
+func WithThreadDump(min, diff, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.threadOpts.Set(min, abs, diff)
+		opts.threadOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -389,13 +386,15 @@ func newCPUOptions() *typeOption {
 	return newTypeOpts(
 		defaultCPUTriggerMin,
 		defaultCPUTriggerAbs,
-		defaultCPUTriggerDiff)
+		defaultCPUTriggerDiff,
+		defaultCooldown,
+	)
 }
 
 // WithCPUDump set the cpu dump options.
-func WithCPUDump(min int, diff int, abs int) Option {
+func WithCPUDump(min int, diff int, abs int, coolDown time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.cpuOpts.Set(min, abs, diff)
+		opts.cpuOpts.Set(min, abs, diff, coolDown)
 		return
 	})
 }
@@ -416,104 +415,9 @@ func WithCGroup(useCGroup bool) Option {
 	})
 }
 
-func WithLoggerLevel(level Lever) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.LogLevel = level
-		return
-	})
-}
-
-func WithLogger(logger Logger) Option {
-	return optionFunc(func(opts *options) (err error) {
-		opts.loggerLock.Lock()
-		defer opts.loggerLock.Unlock()
-		oldLogger := opts.Logger
-		if oldLogger != nil {
-			switch lg := oldLogger.(type) {
-			case *fileLogger:
-				old := lg.file.Load()
-				if old != nil {
-					oldFd, ok := old.(*os.File)
-					if !ok {
-						//nolint
-						fmt.Println("[Holmes] assert fault, expecting *os.File")
-						return
-					}
-					_ = oldFd.Close()
-				}
-
-			}
-		}
-		opts.Logger = logger
-		return
-	})
-}
-
-// NewFileLog init logger
-// shardLoggerSize eg. "b/B", "k/K" "kb/Kb" "mb/Mb", "gb/Gb" "tb/Tb" "pb/Pb".
-func NewFileLog(dumpPath string, rotateEnable bool, shardLoggerSize string, loginfo ...string) Logger {
-	f := &fileLogger{
-		rotateEnable:            rotateEnable,
-		splitLoggerSizeToString: shardLoggerSize,
-		file:                    atomic.Value{},
-	}
-
-	if rotateEnable {
-		parseShardLoggerSize, err := units.FromHumanSize(shardLoggerSize)
-		if err != nil || (err == nil && parseShardLoggerSize <= 0) {
-			f.splitLoggerSize = defaultShardLoggerSize
-		} else {
-			f.splitLoggerSize = parseShardLoggerSize
-		}
-	}
-
-	filePath := path.Join(dumpPath, defaultLoggerName)
-	if len(loginfo) > 0 {
-		filePath = dumpPath + "/" + path.Join(loginfo...)
-	}
-
-	f.dumpPath = filepath.Dir(filePath)
-
-	var (
-		logObj *os.File
-		err    error
-	)
-
-	logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
-	if err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(f.dumpPath, 0755); err != nil {
-			//nolint
-			fmt.Println("mkdir err", err)
-			return nil
-		}
-
-		logObj, err = os.OpenFile(filepath.Clean(filePath), defaultLoggerFlags, defaultLoggerPerm)
-		if err != nil {
-			//nolint
-			fmt.Println("open file err", err)
-			return nil
-		}
-	}
-
-	if err != nil {
-		//nolint
-		fmt.Println("unexpected err", err)
-		return nil
-	}
-
-	f.file.Store(logObj)
-	return f
-}
-
-// NewStdLogger default std logger
-func NewStdLogger() Logger {
-	return &stdLog{os.Stdout}
-}
-
 // WithShrinkThread enable/disable shrink thread when the thread number exceed the max threshold.
-func WithShrinkThread(enable bool, threshold int, delay time.Duration) Option {
+func WithShrinkThread(threshold int, delay time.Duration) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.ShrinkThrOptions.Enable = enable
 		if threshold > 0 {
 			opts.ShrinkThrOptions.Threshold = threshold
 		}
