@@ -162,6 +162,7 @@ func (h *Holmes) setRptEventsCh(ch chan rptEvent) {
 	h.Lock()
 	defer h.Unlock()
 	h.rptEventsCh = ch
+}
 
 // EnableShrinkThread enables shrink thread
 func (h *Holmes) EnableShrinkThread() *Holmes {
@@ -763,7 +764,7 @@ func (h *Holmes) DisableProfileReporter() {
 func (h *Holmes) EnableProfileReporter() {
 	opt := h.opts.GetReporterOpts()
 	if opt.reporter == nil {
-		h.logf("enable profile reporter fault, reporter is empty")
+		h.Infof("enable profile reporter fault, reporter is empty")
 		return
 	}
 	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
@@ -806,14 +807,14 @@ func (h *Holmes) startReporter(ch chan rptEvent) {
 		for evt := range ch {
 			opts := h.opts.GetReporterOpts()
 			if opts.reporter == nil {
-				h.logf("reporter is nil, please initial it before startReporter")
+				h.Infof("reporter is nil, please initial it before startReporter")
 				// drop the event
 				continue
 			}
 			// It's supposed to be sending judgment, isn't it?
 			err := opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
 			if err != nil {
-				h.logf("reporter err:", err)
+				h.Infof("reporter err:", err)
 
 			}
 		}
