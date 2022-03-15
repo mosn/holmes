@@ -166,23 +166,15 @@ func (h *Holmes) setRptEventsCh(ch chan rptEvent) {
 
 func finalizerCallback(gc *gcHeapFinalizer) {
 	// disable or stop gc clean up normally
-	ch := gc.h.getGcEventCh()
-	if ch == nil {
-		return
-	}
 
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
-		if ch != nil {
-			close(gc.h.gcEventsCh)
-			gc.h.setGcEventCh(nil)
-		}
 		return
 	}
 
 	// register the finalizer again
 	runtime.SetFinalizer(gc, finalizerCallback)
 
-	ch = gc.h.getGcEventCh()
+	ch := gc.h.getGcEventCh()
 	if ch == nil {
 		return
 	}
@@ -200,7 +192,6 @@ type gcHeapFinalizer struct {
 }
 
 func (h *Holmes) startGCCycleLoop() {
-	h.setGcEventCh(make(chan struct{}, 1))
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	gc := &gcHeapFinalizer{
@@ -219,16 +210,35 @@ func (h *Holmes) Start() {
 		fmt.Println("Holmes has started, please don't start it again.")
 		return
 	}
+	h.setGcEventCh(make(chan struct{}, 1))
+	rptCh := make(chan rptEvent, 32)
+	h.setRptEventsCh(rptCh)
+
 	h.initEnvironment()
 	go h.startDumpLoop()
-	go h.startReporter()
+	go h.startReporter(rptCh)
 
 	h.startGCCycleLoop()
 }
 
 // Stop the dump loop.
 func (h *Holmes) Stop() {
-	atomic.StoreInt64(&h.stopped, 1)
+	if !atomic.CompareAndSwapInt64(&h.stopped, 0, 1) {
+		//nolint
+		fmt.Println("Holmes has stop, please don't start it again.")
+		return
+	}
+
+	gcEventCh := h.getGcEventCh()
+	if gcEventCh != nil {
+		close(gcEventCh)
+		h.setGcEventCh(nil)
+	}
+	rptEventCh := h.getRptEventsCh()
+	if rptEventCh != nil {
+		close(rptEventCh)
+		h.setRptEventsCh(nil)
+	}
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -755,15 +765,7 @@ func (h *Holmes) EnableProfileReporter() {
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
-	ch := h.getRptEventsCh()
-	if ch == nil {
-		return
-	}
 	if atomic.LoadInt64(&h.stopped) == 1 {
-		if ch != nil {
-			close(h.rptEventsCh)
-			h.setRptEventsCh(nil)
-		}
 		return
 	}
 
@@ -771,41 +773,31 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 	if opts.active == 0 {
 		return
 	}
-	ch = h.getRptEventsCh()
+	ch := h.getRptEventsCh()
 	if ch == nil {
 		return
 	}
 
-	if h.opts.rptOpts.allowDiscarding {
-		select {
-		// Attempt to send
-		case ch <- rptEvent{
-			pType,
-			buf,
-			reason,
-			eventID}:
-		default:
-		}
-		return
-	}
-	// Waiting to be sent
-	ch <- rptEvent{
+	select {
+	// Attempt to send
+	case ch <- rptEvent{
 		pType,
 		buf,
 		reason,
-		eventID}
+		eventID}:
+	default:
+	}
 
 }
 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
-func (h *Holmes) startReporter() {
-	h.setRptEventsCh(make(chan rptEvent, 32))
+func (h *Holmes) startReporter(ch chan rptEvent) {
+	if ch == nil {
+		return
+	}
+
 	go func() {
-		ch := h.getRptEventsCh()
-		if ch == nil {
-			return
-		}
 		for evt := range ch {
 			opts := h.opts.GetReporterOpts()
 			if opts.reporter == nil {

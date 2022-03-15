@@ -102,9 +102,6 @@ func createThread(n int, blockTime time.Duration) {
 }
 
 func TestWithShrinkThread(t *testing.T) {
-	h.Stop()
-	h.Start()
-
 	before := h.shrinkThreadTriggerCount
 
 	err := h.Set(

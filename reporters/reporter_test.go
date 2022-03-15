@@ -64,7 +64,7 @@ func TestReporter(t *testing.T) {
 	cpuReportCount = 0
 	r := &mockReporter{}
 	err := h.Set(
-		holmes.WithProfileReporter(r, false),
+		holmes.WithProfileReporter(r),
 		holmes.WithGoroutineDump(5, 10, 20, 90),
 		holmes.WithCPUDump(0, 2, 80),
 		holmes.WithCollectInterval("5s"),
@@ -88,7 +88,7 @@ func TestReporter(t *testing.T) {
 	h.Start()
 	grReopenReportCount = 0
 	h.Set(
-		holmes.WithProfileReporter(&mockReopenReporter{}, false))
+		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
 	time.Sleep(5 * time.Second)
@@ -103,7 +103,7 @@ func TestReporterReopen(t *testing.T) {
 	cpuReportCount = 0
 	r := &mockReporter{}
 	err := h.Set(
-		holmes.WithProfileReporter(r, false),
+		holmes.WithProfileReporter(r),
 		holmes.WithGoroutineDump(5, 10, 20, 90),
 		holmes.WithCPUDump(0, 2, 80),
 		holmes.WithCollectInterval("5s"),
@@ -129,7 +129,7 @@ func TestReporterReopen(t *testing.T) {
 
 	grReopenReportCount = 0
 	h.Set(
-		holmes.WithProfileReporter(&mockReopenReporter{}, false))
+		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
 	time.Sleep(5 * time.Second)
