@@ -1,10 +1,11 @@
 package http_reporter
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestHttpReporter_Report(t *testing.T) {
@@ -19,7 +20,7 @@ func TestHttpReporter_Report(t *testing.T) {
 }
 
 func newMockServer() {
-	r := gin.Default()
+	r := gin.New()
 	r.POST("/profile/upload", ProfileUploadHandler)
 	go r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
