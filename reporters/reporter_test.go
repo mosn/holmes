@@ -64,8 +64,8 @@ func TestReporter(t *testing.T) {
 	r := &mockReporter{}
 	err := h.Set(
 		holmes.WithProfileReporter(r),
-		holmes.WithGoroutineDump(5, 10, 20, 90, time.Minute),
-		holmes.WithCPUDump(0, 2, 80, time.Minute),
+		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
+		holmes.WithCPUDump(0, 2, 80, time.Second),
 		holmes.WithCollectInterval("5s"),
 	)
 	if err != nil {
@@ -103,8 +103,8 @@ func TestReporterReopen(t *testing.T) {
 	r := &mockReporter{}
 	err := h.Set(
 		holmes.WithProfileReporter(r),
-		holmes.WithGoroutineDump(5, 10, 20, 90, time.Minute),
-		holmes.WithCPUDump(0, 2, 80, time.Minute),
+		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
+		holmes.WithCPUDump(0, 2, 80, time.Second),
 		holmes.WithCollectInterval("5s"),
 	)
 	if err != nil {

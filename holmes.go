@@ -136,34 +136,6 @@ func (h *Holmes) DisableGCHeapDump() *Holmes {
 	return h
 }
 
-// getGcEventCh get gcEventsCh
-func (h *Holmes) getGcEventCh() chan struct{} {
-	h.Lock()
-	defer h.Unlock()
-	return h.gcEventsCh
-}
-
-// setGcEventCh set gcEventsCh
-func (h *Holmes) setGcEventCh(ch chan struct{}) {
-	h.Lock()
-	defer h.Unlock()
-	h.gcEventsCh = ch
-}
-
-// getRptEventsCh get rptEventsCh
-func (h *Holmes) getRptEventsCh() chan rptEvent {
-	h.Lock()
-	defer h.Unlock()
-	return h.rptEventsCh
-}
-
-// setRptEventsCh set rptEventsCh
-func (h *Holmes) setRptEventsCh(ch chan rptEvent) {
-	h.Lock()
-	defer h.Unlock()
-	h.rptEventsCh = ch
-}
-
 // EnableShrinkThread enables shrink thread
 func (h *Holmes) EnableShrinkThread() *Holmes {
 	h.opts.ShrinkThrOptions.Enable = true
@@ -186,7 +158,10 @@ func finalizerCallback(gc *gcHeapFinalizer) {
 	// register the finalizer again
 	runtime.SetFinalizer(gc, finalizerCallback)
 
-	ch := gc.h.getGcEventCh()
+	gc.h.Lock()
+	ch := gc.h.gcEventsCh
+	gc.h.Unlock()
+
 	if ch == nil {
 		return
 	}
@@ -203,7 +178,7 @@ type gcHeapFinalizer struct {
 	h *Holmes
 }
 
-func (h *Holmes) startGCCycleLoop() {
+func (h *Holmes) startGCCycleLoop(ch chan struct{}) {
 	h.gcHeapStats = newRing(minCollectCyclesBeforeDumpStart)
 
 	gc := &gcHeapFinalizer{
@@ -212,7 +187,7 @@ func (h *Holmes) startGCCycleLoop() {
 
 	runtime.SetFinalizer(gc, finalizerCallback)
 
-	go gc.h.gcHeapCheckLoop()
+	go gc.h.gcHeapCheckLoop(ch)
 }
 
 // Start starts the dump loop of holmes.
@@ -222,15 +197,19 @@ func (h *Holmes) Start() {
 		h.Errorf("Holmes has started, please don't start it again.")
 		return
 	}
-	h.setGcEventCh(make(chan struct{}, 1))
+
+	h.Lock()
+	gcEventsCh := make(chan struct{}, 1)
 	rptCh := make(chan rptEvent, 32)
-	h.setRptEventsCh(rptCh)
+	h.gcEventsCh = gcEventsCh
+	h.rptEventsCh = rptCh
+	h.Unlock()
 
 	h.initEnvironment()
 	go h.startDumpLoop()
 	go h.startReporter(rptCh)
 
-	h.startGCCycleLoop()
+	h.startGCCycleLoop(gcEventsCh)
 }
 
 // Stop the dump loop.
@@ -241,16 +220,17 @@ func (h *Holmes) Stop() {
 		return
 	}
 
-	gcEventCh := h.getGcEventCh()
-	if gcEventCh != nil {
-		close(gcEventCh)
-		h.setGcEventCh(nil)
+	h.Lock()
+	if h.gcEventsCh != nil {
+		close(h.gcEventsCh)
+		h.gcEventsCh = nil
 	}
-	rptEventCh := h.getRptEventsCh()
-	if rptEventCh != nil {
-		close(rptEventCh)
-		h.setRptEventsCh(nil)
+
+	if h.rptEventsCh != nil {
+		close(h.rptEventsCh)
+		h.rptEventsCh = nil
 	}
+	h.Unlock()
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -600,11 +580,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 	return true
 }
 
-func (h *Holmes) gcHeapCheckLoop() {
-	ch := h.getGcEventCh()
-	if ch == nil {
-		return
-	}
+func (h *Holmes) gcHeapCheckLoop(ch chan struct{}) {
 
 	for range ch {
 		h.gcHeapCheckAndDump()
@@ -780,19 +756,24 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 	if opts.active == 0 {
 		return
 	}
-	ch := h.getRptEventsCh()
+
+	h.Lock()
+	ch := h.rptEventsCh
+	h.Unlock()
 	if ch == nil {
 		return
 	}
 
-	select {
-	// Attempt to send
-	case ch <- rptEvent{
+	msg := rptEvent{
 		pType,
 		buf,
 		reason,
-		eventID}:
+		eventID}
+	select {
+	// Attempt to send
+	case ch <- msg:
 	default:
+		h.Warnf("channel is full, msg:", msg)
 	}
 
 }
@@ -800,10 +781,6 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 // startReporter starts a background goroutine to consume event channel,
 // and finish it at after receive from cancel channel.
 func (h *Holmes) startReporter(ch chan rptEvent) {
-	if ch == nil {
-		return
-	}
-
 	go func() {
 		for evt := range ch {
 			opts := h.opts.GetReporterOpts()
