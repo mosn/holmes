@@ -149,8 +149,12 @@ func (h *Holmes) DisableShrinkThread() *Holmes {
 }
 
 func finalizerCallback(gc *gcHeapFinalizer) {
+	defer func() {
+		if r := recover(); r != nil {
+			gc.h.Errorf("Panic in finalizer callback: %v", r)
+		}
+	}()
 	// disable or stop gc clean up normally
-
 	if atomic.LoadInt64(&gc.h.stopped) == 1 {
 		return
 	}
@@ -158,14 +162,13 @@ func finalizerCallback(gc *gcHeapFinalizer) {
 	// register the finalizer again
 	runtime.SetFinalizer(gc, finalizerCallback)
 
-	gc.h.Lock()
+	// read channel should be atomic.
 	ch := gc.h.gcEventsCh
-	gc.h.Unlock()
-
 	if ch == nil {
 		return
 	}
-
+	// Notice: here may be a litte race, will panic when ch is closed now.
+	// we just leave it since it is very small and there is a recover.
 	select {
 	case ch <- struct{}{}:
 	default:
@@ -192,18 +195,19 @@ func (h *Holmes) startGCCycleLoop(ch chan struct{}) {
 
 // Start starts the dump loop of holmes.
 func (h *Holmes) Start() {
+	h.Lock()
+	defer h.Unlock()
+
 	if !atomic.CompareAndSwapInt64(&h.stopped, 1, 0) {
 		//nolint
 		h.Errorf("Holmes has started, please don't start it again.")
 		return
 	}
 
-	h.Lock()
 	gcEventsCh := make(chan struct{}, 1)
 	rptCh := make(chan rptEvent, 32)
 	h.gcEventsCh = gcEventsCh
 	h.rptEventsCh = rptCh
-	h.Unlock()
 
 	h.initEnvironment()
 	go h.startDumpLoop()
@@ -214,23 +218,23 @@ func (h *Holmes) Start() {
 
 // Stop the dump loop.
 func (h *Holmes) Stop() {
+	h.Lock()
+	defer h.Unlock()
+
 	if !atomic.CompareAndSwapInt64(&h.stopped, 0, 1) {
 		//nolint
 		fmt.Println("Holmes has stop, please don't start it again.")
 		return
 	}
 
-	h.Lock()
-	if h.gcEventsCh != nil {
-		close(h.gcEventsCh)
+	if gcEventsCh := h.gcEventsCh; gcEventsCh != nil {
 		h.gcEventsCh = nil
+		close(gcEventsCh)
 	}
-
-	if h.rptEventsCh != nil {
-		close(h.rptEventsCh)
+	if rptEventsCh := h.rptEventsCh; rptEventsCh != nil {
 		h.rptEventsCh = nil
+		close(rptEventsCh)
 	}
-	h.Unlock()
 }
 
 func (h *Holmes) startDumpLoop() {
@@ -581,7 +585,6 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 }
 
 func (h *Holmes) gcHeapCheckLoop(ch chan struct{}) {
-
 	for range ch {
 		h.gcHeapCheckAndDump()
 	}
@@ -741,13 +744,19 @@ func (h *Holmes) DisableProfileReporter() {
 func (h *Holmes) EnableProfileReporter() {
 	opt := h.opts.GetReporterOpts()
 	if opt.reporter == nil {
-		h.Infof("enable profile reporter fault, reporter is empty")
+		h.Infof("failed to enable profile reporter since reporter is empty")
 		return
 	}
 	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
 }
 
 func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
+	defer func() {
+		if r := recover(); r != nil {
+			h.Errorf("Panic during report profile: %v", r)
+		}
+	}()
+
 	if atomic.LoadInt64(&h.stopped) == 1 {
 		return
 	}
@@ -757,25 +766,25 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 		return
 	}
 
-	h.Lock()
+	msg := rptEvent{
+		PType:   pType,
+		Buf:     buf,
+		Reason:  reason,
+		EventID: eventID,
+	}
+
+	// read channel should be atomic.
 	ch := h.rptEventsCh
-	h.Unlock()
 	if ch == nil {
 		return
 	}
-
-	msg := rptEvent{
-		pType,
-		buf,
-		reason,
-		eventID}
+	// Notice: here may be a litte race, will panic when ch is closed now.
+	// we just leave it since it is very small and there is a recover.
 	select {
-	// Attempt to send
 	case ch <- msg:
 	default:
-		h.Warnf("channel is full, msg:", msg)
+		h.Warnf("reporter channel is full, will ignore it")
 	}
-
 }
 
 // startReporter starts a background goroutine to consume event channel,
