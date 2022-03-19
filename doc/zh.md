@@ -246,4 +246,4 @@ h, _ := holmes.New(
 Gorountine dump 会导致 STW，[从而导致时延](https://github.com/golang/go/issues/33250) 。
 
 ## 使用示例
-[点击这里](./doc/example.md)
+[点击这里](./example.md)
