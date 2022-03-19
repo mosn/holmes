@@ -137,7 +137,6 @@ collects it between one `CollectInterval`. So we design a new heap memory monito
 GC cycle, to control holmes dump. It will dump twice heap profile continuously while RSS spike, then devs
 can compare the profiles through `pprof base` command.
 
-Note: we recommend enabling one of dump type between `Memory Dump` and `GcHeap Dump`.
 
 ```go
 	h, _ := holmes.New(

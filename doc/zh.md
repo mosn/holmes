@@ -92,10 +92,10 @@ h.Start()
 h.Stop()
 ```
 
-* WithCollectInterval("5s") 每5s探测一次当前应用的各项指标，该值建议设置为大于1s。
+* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
 * WithDumpPath("/tmp") profile文件保存路径。
 * WithTextDump() profile的内容将会输出到日志中。
-* WithGoroutineDump(10, 25, 2000, 100*1000,time.Minute) 当goroutine指标满足任意以下条件时，将会触发dump操作。
+* WithGoroutineDump(10, 25, 2000, 100*1000,time.Minute) 当goroutine指标满足以下条件时，将会触发dump操作。
   current_goroutine_num > `10` && current_goroutine_num < `100*1000` && 
   current_goroutine_num > `125`% * previous_average_goroutine_num or current_goroutine_num > `2000`.
   `time.Minute` 是两次dump操作之间最小时间间隔，避免频繁profiling对性能产生的影响。
@@ -122,7 +122,7 @@ h.Start()
 h.Stop()
 ```
 
-* WithCollectInterval("5s") 每5s探测一次当前应用的各项指标，该值建议设置为大于1s。
+* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
 * WithDumpPath("/tmp") profile文件保存路径。
 * cpu profile支持保存文件，不支持输出到日志中，所以WithBinaryDump()和 WithTextDump()在这场景会失效。
 * WithCPUDump(10, 25, 80, time.Minute) 会在满足以下条件时dump profile cpu usage > `10%` &&
@@ -148,7 +148,7 @@ h.Start()
 // stop the dumper
 h.Stop()
 ```
-* WithCollectInterval("5s") 每5s探测一次当前应用的各项指标，该值建议设置为大于1s。
+* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
 * WithDumpPath("/tmp") profile文件保存路径。
 * WithTextDump() profile的内容将会输出到日志中。
 * WithMemDump(30, 25, 80, time.Minute) 会在满足以下条件时抓取heap profile memory usage > `10%` &&
@@ -158,10 +158,9 @@ h.Stop()
 ### 基于Gc周期的Heap Memory Dump
 
 在一些场景下，我们无法通过定时的heap memory抓取到有效的profile, 比如应用在一个`CollectInterval`周期内分配了大量内存，
-又快速回收了它们，holmes在周期前后的探测到堆使用率没有产生变化，与实际情况不符。为了解决这种情况，holmes开发了基于GC周期的
+又快速回收了它们，holmes在周期前后的采集到堆使用率没有产生变化，与实际情况不符。为了解决这种情况，holmes开发了基于GC周期的
 Dump类型，holmes会在堆内存使用率飙高的前后两个GC周期内各dump一次profile，然后开发人员可以使用`pprof --base`命令去对比
-两个profile之间的差异。 [具体实现介绍](https://uncledou.site/2022/go-pprof-heap/)。
-Note: 如果开启了`GcHeap Dump`的话，没必要再开启常规的`Memory Dump`
+两个时刻堆内存之间的差异。 [具体实现介绍](https://uncledou.site/2022/go-pprof-heap/)。
 
 ```go
 	h, _ := holmes.New(
@@ -218,14 +217,14 @@ h, _ := holmes.New(
     holmes.WithTextDump(),
 
     holmes.WithCPUDump(10, 25, 80, time.Minute),
-    //holmes.WithMemDump(30, 25, 80, time.Minute),
+    holmes.WithMemDump(30, 25, 80, time.Minute),
     holmes.WithGCHeapDump(10, 20, 40, time.Minute),
     holmes.WithGoroutineDump(500, 25, 20000, 0, time.Minute),
 )
 
     h.EnableCPUDump().
     EnableGoroutineDump().
-	//EnableMemDump().
+	EnableMemDump().
 	EnableGCHeapDump().Start()
 
 ```
