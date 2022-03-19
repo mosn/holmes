@@ -99,9 +99,10 @@ h.Stop()
   current_goroutine_num > `10` && current_goroutine_num < `100*1000` && 
   current_goroutine_num > `125`% * previous_average_goroutine_num or current_goroutine_num > `2000`.
   `time.Minute` 是两次dump操作之间最小时间间隔，避免频繁profiling对性能产生的影响。
-  > WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Duration)
-  > 当应用所启动的goroutine number大于`Max` 时，holmes会跳过dump操作，因为当goroutine number很大时，
-  > dump goroutine profile操作成本很高（STW && dump），有可能拖垮应用。当`Max`=0 时代表没有限制。
+  
+> WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Duration)
+> 当应用所启动的goroutine number大于`Max` 时，holmes会跳过dump操作，因为当goroutine number很大时，
+> dump goroutine profile操作成本很高（STW && dump），有可能拖垮应用。当`Max`=0 时代表没有限制。
 
 ### Dump cpu profile
 
