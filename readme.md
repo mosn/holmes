@@ -1,18 +1,18 @@
-* [holmes](#holmes)
+* [Holmes](#holmes)
   * [Design](#design)
-  * [how to use](#how-to-use)
-    * [dump goroutine when goroutine number spikes](#dump-goroutine-when-goroutine-number-spikes)
+  * [How to use](#how-to-use)
+    * [Dump goroutine when goroutine number spikes](#dump-goroutine-when-goroutine-number-spikes)
     * [dump cpu profile when cpu load spikes](#dump-cpu-profile-when-cpu-load-spikes)
     * [dump heap profile when RSS spikes](#dump-heap-profile-when-rss-spikes)
     * [Dump heap profile when RSS spikes based GC cycle](#dump-heap-profile-when-rss-spikes-based-gc-cycle)
     * [Set holmes configurations on fly](#set-holmes-configurations-on-fly)
     * [Reporter dump event](#reporter-dump-event)
-    * [enable them all\!](#enable-them-all)
-    * [running in docker or other cgroup limited environment](#running-in-docker-or-other-cgroup-limited-environment)
+    * [Enable them all\!](#enable-them-all)
+    * [Running in docker or other cgroup limited environment](#running-in-docker-or-other-cgroup-limited-environment)
   * [known risks](#known-risks)
   * [Show cases](#show-cases)
 
-# holmes
+# Holmes
 [中文版](./doc/zh.md)
 
 Self-aware Golang profile dumper.
@@ -42,9 +42,9 @@ OOM killed, CPU usage exceed 80%, goroutine num exceed 100k. The profile is alre
 to your dump path. You could just fetch the profile and see what actually happened without pressure.
 
 
-## how to use
+## How to use
 
-### dump goroutine when goroutine number spikes
+### Dump goroutine when goroutine number spikes
 
 ```go
 h, _ := holmes.New(
@@ -183,7 +183,7 @@ You can use `Reporter` to implement the following features:
   
 ```
   
-### enable them all!
+### Enable them all!
 
 It's easy.
 
@@ -206,7 +206,7 @@ h, _ := holmes.New(
 
 ```
 
-### running in docker or other cgroup limited environment
+### Running in docker or other cgroup limited environment
 
 ```go
 h, _ := holmes.New(
