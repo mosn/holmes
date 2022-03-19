@@ -1,5 +1,5 @@
 # holmes
-[中文版](https://github.com/Jun10ng/holmes/tree/master/doc/zh.md)
+[中文版](./doc/zh.md)
 
 Self-aware Golang profile dumper.
 
