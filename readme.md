@@ -179,4 +179,4 @@ h, _ := holmes.New(
 Collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the STW.
 
 ## Show cases
-[Click here](./example/readme.md)
+[Click here](./doc/example.md)
