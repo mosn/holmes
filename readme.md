@@ -51,7 +51,7 @@ h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
-    holmes.WithGoroutineDump(10, 25, 2000, 10*1000),
+    holmes.WithGoroutineDump(10, 25, 2000, 10*1000,time.Minute),
 )
 h.EnableGoroutineDump()
 
@@ -196,7 +196,7 @@ h, _ := holmes.New(
     holmes.WithCPUDump(10, 25, 80, time.Minute),
     //holmes.WithMemDump(30, 25, 80, time.Minute),
     holmes.WithGCHeapDump(10, 20, 40, time.Minute),
-    holmes.WithGoroutineDump(500, 25, 20000, 0),
+    holmes.WithGoroutineDump(500, 25, 20000, 0,time.Minute),
 )
 
     h.EnableCPUDump().
@@ -214,7 +214,7 @@ h, _ := holmes.New(
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
 
-    holmes.WithCPUDump(10, 25, 80),
+    holmes.WithCPUDump(10, 25, 80,time.Minute),
     holmes.WithCGroup(true), // set cgroup to true
 )
 ```
