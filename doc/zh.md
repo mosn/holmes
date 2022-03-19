@@ -159,6 +159,37 @@ Note: 如果开启了`GcHeap Dump`的话，没必要再开启常规的`Memory Du
 	h.EnableGCHeapDump().Start()
 	time.Sleep(time.Hour)
 ```
+### 动态设置holmes配置
+你可以通过`Set`在系统运行时更新holmes的配置。他的使用十分简单，和初始化时的`New`方法一样。
+```go
+    h.Set(
+        WithCollectInterval("2s"),
+        WithGoroutineDump(min, diff, abs, 90, time.Minute))
+```
+
+### Dump事件上报
+
+你可以通过`Reporter` 来实现以下功能：
+* 发送告警信息当holmes 触发Dump操作时。
+* 将profiles上传到其他地方，以防实例被销毁，从而导致profile丢失。
+
+```go
+        type ReporterImpl struct{}
+        func (r *ReporterImple) Report(pType string, buf []byte, reason string, eventID string) error{
+            // do something	
+        }
+        ......
+        r := &ReporterImpl{} // a implement of holmes.ProfileReporter Interface.
+    	h, _ := holmes.New(
+            holmes.WithProfileReporter(reporter),
+            holmes.WithDumpPath("/tmp"),
+            holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
+            holmes.WithBinaryDump(),
+            holmes.WithMemoryLimit(100*1024*1024), // 100MB
+            holmes.WithGCHeapDump(10, 20, 40, time.Minute),
+)
+  
+```
 
 ### 开启全部
 

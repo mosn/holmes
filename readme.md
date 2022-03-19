@@ -137,6 +137,37 @@ Note: we recommend enabling one of dump type between `Memory Dump` and `GcHeap D
 	h.EnableGCHeapDump().Start()
 	time.Sleep(time.Hour)
 ```
+### Set holmes configurations on fly
+You can use `Set` method to modify holmes' configurations when the application is running.
+```go
+    h.Set(
+        WithCollectInterval("2s"),
+        WithGoroutineDump(min, diff, abs, 90, time.Minute))
+```
+
+### Reporter dump event
+
+You can use `Reporter` to implement the following features:
+* Send alarm messages when holmes dump profiles.
+* Send profiles to the data center for saving or analyzing.
+
+```go
+        type ReporterImpl struct{}
+        func (r *ReporterImple) Report(pType string, buf []byte, reason string, eventID string) error{
+            // do something	
+        }
+        ......
+        r := &ReporterImpl{} // a implement of holmes.ProfileReporter Interface.
+    	h, _ := holmes.New(
+            holmes.WithProfileReporter(reporter),
+            holmes.WithDumpPath("/tmp"),
+            holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
+            holmes.WithBinaryDump(),
+            holmes.WithMemoryLimit(100*1024*1024), // 100MB
+            holmes.WithGCHeapDump(10, 20, 40, time.Minute),
+)
+  
+```
   
 ### enable them all!
 
