@@ -1,3 +1,12 @@
+* [cases show](#cases-show)
+    * [RSS peak caused by make a 1GB slice](#rss-peak-caused-by-make-a-1gb-slice)
+    * [goroutine explosion caused by deadlock](#goroutine-explosion-caused-by-deadlock)
+    * [goroutine explosion caused by channel block](#goroutine-explosion-caused-by-channel-block)
+    * [process slowly leaks goroutines](#process-slowly-leaks-goroutines)
+    * [large memory allocation caused by business logic](#large-memory-allocation-caused-by-business-logic)
+    * [deadloop caused cpu outage](#deadloop-caused-cpu-outage)
+    * [large thread allocation caused by cgo block](#large-thread-allocation-caused-by-cgo-block)
+
 
 ## cases show
 all example code in [here](../example)
