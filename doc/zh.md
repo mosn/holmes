@@ -225,8 +225,8 @@ h, _ := holmes.New(
 
     h.EnableCPUDump().
     EnableGoroutineDump().
-	EnableMemDump().
-	EnableGCHeapDump().
+	//EnableMemDump().
+	EnableGCHeapDump().Start()
 
 ```
 
