@@ -1,3 +1,5 @@
+![license](https://img.shields.io/badge/license-Apache--2.0-green.svg)
+
 * [Holmes](#holmes)
   * [Design](#design)
   * [How to use](#how-to-use)
@@ -224,3 +226,14 @@ Collect a goroutine itself [may cause latency spike](https://github.com/golang/g
 
 ## Show cases
 [Click here](./doc/example.md)
+
+## Contributing
+See our [contributor guide](./CONTRIBUTING.md).
+
+## Community
+
+Scan the QR code below with DingTalk(钉钉) to join the Holmes user group.
+
+<img src="./dingtalk.png" alt="dingtalk" width="200"/>
+
+
