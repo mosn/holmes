@@ -251,3 +251,6 @@ Gorountine dump 会导致 STW，[从而导致时延](https://github.com/golang/g
 
 ## 使用示例
 [点击这里](./example.md)
+
+## Contributing
+See our [contributor guide](./CONTRIBUTING.md).
