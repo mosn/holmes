@@ -193,7 +193,7 @@ h.Stop()
 
 ```go
         type ReporterImpl struct{}
-        func (r *ReporterImple) Report(pType string, buf []byte, reason string, eventID string) error{
+        func (r *ReporterImpl) Report(pType string, buf []byte, reason string, eventID string) error{
             // do something	
         }
         ......
