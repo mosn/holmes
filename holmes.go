@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"runtime"
 	"runtime/pprof"
 	"sync"
@@ -554,9 +553,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.data, curCPUUsage)
 
-	binFileName := getBinaryFileName(h.opts.DumpPath, cpu, "")
-
-	bf, err := os.OpenFile(binFileName, defaultLoggerFlags, defaultLoggerPerm)
+	bf, binFileName, err := getBinaryFileNameAndCreate(h.opts.DumpPath, cpu, "")
 	if err != nil {
 		h.Errorf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false
