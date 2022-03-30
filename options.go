@@ -95,8 +95,8 @@ type DumpOptions struct {
 	DumpProfileType dumpProfileType
 	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
 	DumpFullStack bool
-	// dump goroutine to logger. issues/90
-	DumpGrToLogger bool
+	// dump profile to logger. It will make huge log output if enable DumpToLogger option. issues/90
+	DumpToLogger bool
 }
 
 // ShrinkThrOptions contains the configuration about shrink thread
@@ -290,9 +290,9 @@ func WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Durati
 	})
 }
 
-func WithGrDumpToLogger(new bool) Option {
+func WithDumpToLogger(new bool) Option {
 	return optionFunc(func(opts *options) (err error) {
-		opts.DumpGrToLogger = new
+		opts.DumpToLogger = new
 		return
 	})
 }

@@ -723,8 +723,8 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		return
 	}
 
-	if h.opts.DumpOptions.DumpGrToLogger {
-		h.Infof("goroutine dump on logger: \n" + data.String())
+	if h.opts.DumpOptions.DumpToLogger {
+		h.Infof("dump profile on logger: \n" + data.String())
 	}
 
 	h.Infof("[Holmes] pprof %v profile write to file %v successfully", check2name[dumpType], fileName)
