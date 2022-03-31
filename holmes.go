@@ -240,7 +240,7 @@ func (h *Holmes) Stop() {
 
 	if !atomic.CompareAndSwapInt64(&h.stopped, 0, 1) {
 		//nolint
-		fmt.Println("Holmes has stop, please don't start it again.")
+		fmt.Println("Holmes has stop, please don't stop it again.")
 		return
 	}
 
