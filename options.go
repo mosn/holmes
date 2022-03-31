@@ -18,10 +18,11 @@
 package holmes
 
 import (
-	mlog "mosn.io/pkg/log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	mlog "mosn.io/pkg/log"
 )
 
 type options struct {
@@ -94,6 +95,8 @@ type DumpOptions struct {
 	DumpProfileType dumpProfileType
 	// only dump top 10 if set to false, otherwise dump all, only effective when in_text = true
 	DumpFullStack bool
+	// dump profile to logger. It will make huge log output if enable DumpToLogger option. issues/90
+	DumpToLogger bool
 }
 
 // ShrinkThrOptions contains the configuration about shrink thread
@@ -283,6 +286,13 @@ func WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Durati
 	return optionFunc(func(opts *options) (err error) {
 		opts.grOpts.Set(min, abs, diff, coolDown)
 		opts.grOpts.GoroutineTriggerNumMax = max
+		return
+	})
+}
+
+func WithDumpToLogger(new bool) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.DumpToLogger = new
 		return
 	})
 }

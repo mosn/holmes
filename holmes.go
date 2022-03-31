@@ -589,6 +589,15 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 	time.Sleep(defaultCPUSamplingTime)
 	pprof.StopCPUProfile()
 
+	if h.opts.DumpToLogger {
+		bfCpy, err := ioutil.ReadFile(binFileName)
+		if err != nil {
+			h.Errorf("encounter error when dumping profile to logger, failed to read cpu profile file: %v", err)
+			return true
+		}
+		h.Infof("[Holmes] CPU profile:: \n" + string(bfCpy))
+	}
+
 	if opts := h.opts.GetReporterOpts(); opts.active == 1 {
 		bfCpy, err := ioutil.ReadFile(binFileName)
 		if err != nil {
@@ -722,6 +731,11 @@ func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureTyp
 		h.Errorf("failed to write profile to file(%v), err: %s", fileName, err.Error())
 		return
 	}
+
+	if h.opts.DumpOptions.DumpToLogger {
+		h.Infof(fmt.Sprintf("[Holmes] %v profile: \n", check2name[dumpType]) + data.String())
+	}
+
 	h.Infof("[Holmes] pprof %v profile write to file %v successfully", check2name[dumpType], fileName)
 }
 

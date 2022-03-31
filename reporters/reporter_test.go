@@ -123,6 +123,7 @@ func TestReporterReopen(t *testing.T) {
 		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
 		holmes.WithCPUDump(0, 2, 80, time.Second),
 		holmes.WithCollectInterval("5s"),
+		holmes.WithDumpToLogger(true),
 	)
 	if err != nil {
 		log.Fatalf("fail to set opts on running time.")
