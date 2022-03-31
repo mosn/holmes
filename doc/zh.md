@@ -81,6 +81,7 @@ h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
+    holmes.WithDumpToLogger(true),
     holmes.WithGoroutineDump(10, 25, 2000, 10*1000, time.Minute),
 )
 h.EnableGoroutineDump()
@@ -94,7 +95,8 @@ h.Stop()
 
 * WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
 * WithDumpPath("/tmp") profile文件保存路径。
-* WithTextDump() profile的内容将会输出到日志中。
+* WithTextDump() 以文本格式保存profile内容。
+* WithDumpToLogger() profile内容将会输出到日志。
 * WithGoroutineDump(10, 25, 2000, 100*1000, time.Minute) 当goroutine指标满足以下条件时，将会触发dump操作。
   current_goroutine_num > `10` && current_goroutine_num < `100*1000` && 
   current_goroutine_num > `125`% * previous_average_goroutine_num or current_goroutine_num > `2000`.
