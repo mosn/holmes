@@ -30,7 +30,7 @@ var cpuReportCount int
 type mockReporter struct {
 }
 
-func (m *mockReporter) Report(pType string, buf []byte, reason string, eventID string) error {
+func (m *mockReporter) Report(pType string, dumpName string, reason string, eventID string) error {
 	log.Printf("call %s report \n", pType)
 
 	switch pType {
@@ -48,9 +48,8 @@ var grReopenReportCount int
 type mockReopenReporter struct {
 }
 
-func (m *mockReopenReporter) Report(pType string, buf []byte, reason string, eventID string) error {
+func (m *mockReopenReporter) Report(pType string, dumpName string, reason string, eventID string) error {
 	log.Printf("call %s report \n", pType)
-
 	switch pType {
 	case "goroutine":
 		grReopenReportCount++

@@ -3,7 +3,6 @@ package holmes
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"runtime"
 	"runtime/pprof"
 	"sync"
@@ -55,7 +54,7 @@ type Holmes struct {
 }
 
 type ProfileReporter interface {
-	Report(pType string, buf []byte, reason string, eventID string) error
+	Report(pType string, dumpName string, reason string, eventID string) error
 }
 
 // New creates a holmes dumper.
@@ -357,9 +356,8 @@ func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, goroutine, "")
 
-	h.ReportProfile(type2name[goroutine], buf.Bytes(), reason, "")
+	h.ReportProfile(type2name[goroutine], h.writeProfileDataToFile(buf, goroutine, ""), reason, "")
 	return true
 }
 
@@ -400,9 +398,7 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
-	h.writeProfileDataToFile(buf, mem, "")
-
-	h.ReportProfile(type2name[mem], buf.Bytes(), reason, "")
+	h.ReportProfile(type2name[mem], h.writeProfileDataToFile(buf, mem, ""), reason, "")
 	return true
 }
 
@@ -505,15 +501,13 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 	var buf bytes.Buffer
 
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, thread, eventID)
 
-	h.ReportProfile(type2name[thread], buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[thread], h.writeProfileDataToFile(buf, thread, eventID), reason, eventID)
 
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, goroutine, eventID)
 
-	h.ReportProfile(type2name[goroutine], buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[goroutine], h.writeProfileDataToFile(buf, goroutine, eventID), reason, eventID)
 
 	return true
 }
@@ -570,12 +564,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 	pprof.StopCPUProfile()
 
 	if opts := h.opts.GetReporterOpts(); opts.active == 1 {
-		bfCpy, err := ioutil.ReadFile(binFileName)
-		if err != nil {
-			h.Errorf("[holmes reporter] failed to read cpu profile file: %v", err)
-			return true
-		}
-		h.ReportProfile(type2name[cpu], bfCpy, reason, "")
+		h.ReportProfile(type2name[cpu], binFileName, reason, "")
 	}
 
 	return true
@@ -690,19 +679,19 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
-	h.writeProfileDataToFile(buf, gcHeap, eventID)
 
-	h.ReportProfile(type2name[gcHeap], buf.Bytes(), reason, eventID)
+	h.ReportProfile(type2name[gcHeap], h.writeProfileDataToFile(buf, gcHeap, eventID), reason, eventID)
 	return true
 }
 
-func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, eventID string) {
+func (h *Holmes) writeProfileDataToFile(data bytes.Buffer, dumpType configureType, eventID string) string {
 	fileName, err := writeFile(data, dumpType, h.opts.DumpOptions, eventID)
 	if err != nil {
 		h.Errorf("failed to write profile to file(%v), err: %s", fileName, err.Error())
-		return
+		return ""
 	}
 	h.Infof("[Holmes] pprof %v profile write to file %v successfully", check2name[dumpType], fileName)
+	return fileName
 }
 
 func (h *Holmes) initEnvironment() {
@@ -747,7 +736,12 @@ func (h *Holmes) EnableProfileReporter() {
 	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
 }
 
-func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID string) {
+func (h *Holmes) ReportProfile(pType string, dumpName string, reason string, eventID string) {
+	if dumpName == "" {
+		h.Errorf("dump name is empty, type:%s, reason:%s, eventID:%s", pType, reason, eventID)
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			h.Errorf("Panic during report profile: %v", r)
@@ -764,10 +758,10 @@ func (h *Holmes) ReportProfile(pType string, buf []byte, reason string, eventID 
 	}
 
 	msg := rptEvent{
-		PType:   pType,
-		Buf:     buf,
-		Reason:  reason,
-		EventID: eventID,
+		PType:    pType,
+		DumpName: dumpName,
+		Reason:   reason,
+		EventID:  eventID,
 	}
 
 	// read channel should be atomic.
@@ -796,7 +790,7 @@ func (h *Holmes) startReporter(ch chan rptEvent) {
 				continue
 			}
 			// It's supposed to be sending judgment, isn't it?
-			err := opts.reporter.Report(evt.PType, evt.Buf, evt.Reason, evt.EventID) // nolint: errcheck
+			err := opts.reporter.Report(evt.PType, evt.DumpName, evt.Reason, evt.EventID) // nolint: errcheck
 			if err != nil {
 				h.Infof("reporter err:", err)
 
