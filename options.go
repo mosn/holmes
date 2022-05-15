@@ -69,10 +69,10 @@ type options struct {
 
 // rptEvent stands of the args of report event
 type rptEvent struct {
-	PType   string
-	Buf     []byte
-	Reason  string
-	EventID string
+	PType    string
+	DumpName string
+	Reason   string
+	EventID  string
 }
 
 type ReporterOptions struct {
