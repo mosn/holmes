@@ -30,7 +30,7 @@ func TestHttpReporter_Report(t *testing.T) {
 
 	reporter := NewReporter("test", "http://127.0.0.1:8080/profile/upload")
 
-	if err := reporter.Report("goroutine", "reporter_filename_test.log", "test", "test-id"); err != nil {
+	if err := reporter.Report("goroutine", "reporter_filename_test", "test", "test-id"); err != nil {
 		log.Fatalf("failed to report: %v", err)
 	}
 }
