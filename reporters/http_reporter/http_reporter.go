@@ -50,18 +50,19 @@ func (r *HttpReporter) Report(ptype string, filename string, reason string, even
 	writer := multipart.NewWriter(body)
 
 	// read filename
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("read form File: %s err:  %v", filename, err)
-	}
+	if filename != "" {
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return fmt.Errorf("read form File: %s err:  %v", filename, err)
+		}
+		part, err := writer.CreateFormFile("profile", "go-pprof-profile")
+		if err != nil {
+			return fmt.Errorf("create form File err: %v", err)
+		}
 
-	part, err := writer.CreateFormFile("profile", "go-pprof-profile")
-	if err != nil {
-		return fmt.Errorf("create form File err: %v", err)
-	}
-
-	if _, err := part.Write(data); err != nil {
-		return fmt.Errorf("write buf to file part err: %v", err)
+		if _, err := part.Write(data); err != nil {
+			return fmt.Errorf("write buf to file part err: %v", err)
+		}
 	}
 
 	writer.WriteField("token", r.token)      // nolint: errcheck
