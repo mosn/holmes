@@ -72,7 +72,7 @@ type Holmes struct {
 }
 
 type ProfileReporter interface {
-	Report(pType string, dumpName string, reason string, eventID string) error
+	Report(pType string, filename string, reason string, eventID string) error
 }
 
 // New creates a holmes dumper.
@@ -768,8 +768,8 @@ func (h *Holmes) EnableProfileReporter() {
 	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
 }
 
-func (h *Holmes) ReportProfile(pType string, dumpName string, reason string, eventID string) {
-	if dumpName == "" {
+func (h *Holmes) ReportProfile(pType string, filename string, reason string, eventID string) {
+	if filename == "" {
 		h.Errorf("dump name is empty, type:%s, reason:%s, eventID:%s", pType, reason, eventID)
 		return
 	}
@@ -791,7 +791,7 @@ func (h *Holmes) ReportProfile(pType string, dumpName string, reason string, eve
 
 	msg := rptEvent{
 		PType:    pType,
-		DumpName: dumpName,
+		FileName: filename,
 		Reason:   reason,
 		EventID:  eventID,
 	}
@@ -822,7 +822,7 @@ func (h *Holmes) startReporter(ch chan rptEvent) {
 				continue
 			}
 			// It's supposed to be sending judgment, isn't it?
-			err := opts.reporter.Report(evt.PType, evt.DumpName, evt.Reason, evt.EventID) // nolint: errcheck
+			err := opts.reporter.Report(evt.PType, evt.FileName, evt.Reason, evt.EventID) // nolint: errcheck
 			if err != nil {
 				h.Infof("reporter err:", err)
 

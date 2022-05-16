@@ -70,7 +70,7 @@ type options struct {
 // rptEvent stands of the args of report event
 type rptEvent struct {
 	PType    string
-	DumpName string
+	FileName string
 	Reason   string
 	EventID  string
 }

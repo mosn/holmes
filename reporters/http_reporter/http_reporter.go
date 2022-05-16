@@ -45,13 +45,28 @@ func NewReporter(token string, url string) holmes.ProfileReporter {
 	}
 }
 
-func (r *HttpReporter) Report(ptype string, dumpName string, reason string, eventID string) error {
+func (r *HttpReporter) Report(ptype string, filename string, reason string, eventID string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
+	// read filename
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("read form File: %s err:  %v", filename, err)
+	}
+
+	part, err := writer.CreateFormFile("profile", "go-pprof-profile")
+	if err != nil {
+		return fmt.Errorf("create form File err: %v", err)
+	}
+
+	if _, err := part.Write(data); err != nil {
+		return fmt.Errorf("write buf to file part err: %v", err)
+	}
+
 	writer.WriteField("token", r.token)      // nolint: errcheck
 	writer.WriteField("profile_type", ptype) // nolint: errcheck
-	writer.WriteField("dumpName", dumpName)  // nolint: errcheck
+	writer.WriteField("filename", filename)  // nolint: errcheck
 	writer.WriteField("event_id", eventID)   // nolint: errcheck
 	writer.WriteField("comment", reason)     // nolint: errcheck
 	writer.Close()                           // nolint: errcheck
