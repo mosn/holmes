@@ -193,6 +193,9 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
 	suffix := time.Now().Format("20060102150405.000") + ".log"
+	if len(eventID) == 0 {
+		return path.Join(filePath, check2name[dumpType]+"."+suffix)
+	}
 
 	return path.Join(filePath, check2name[dumpType]+"."+eventID+"."+suffix)
 }
