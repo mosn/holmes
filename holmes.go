@@ -347,6 +347,13 @@ func (h *Holmes) goroutineCheckAndDump(gNum int) {
 		return
 	}
 
+	// optimize: https://github.com/mosn/holmes/issues/84
+	// Thread dump information contains goroutine information
+	// skip goroutine dump
+	if h.threadCoolDownTime.After(time.Now()) {
+		h.Debugf("[Holmes] thread dump is in cooldown skip goroutine dump")
+		return
+	}
 	if h.grCoolDownTime.After(time.Now()) {
 		h.Debugf("[Holmes] goroutine dump is in cooldown")
 		return
