@@ -330,11 +330,11 @@ func (h *Holmes) startDumpLoop() {
 				continue
 			}
 
-			h.goroutineCheckAndDump(gNum)
 			h.memCheckAndDump(mem)
 			h.cpuCheckAndDump(cpu)
 			h.threadCheckAndDump(tNum)
 			h.threadCheckAndShrink(tNum)
+			h.goroutineCheckAndDump(gNum)
 		}
 	}
 }
