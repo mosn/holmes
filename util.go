@@ -200,7 +200,6 @@ func getBinaryFileName(filePath string, dumpType configureType, eventID string) 
 	return path.Join(filePath, check2name[dumpType]+"."+eventID+"."+suffix)
 }
 
-// getBinaryFileNameAndCreate 获取文件路径并创建
 // fix #89
 func getBinaryFileNameAndCreate(dump string, dumpType configureType, eventID string) (*os.File, string, error) {
 	filepath := getBinaryFileName(dump, dumpType, eventID)
