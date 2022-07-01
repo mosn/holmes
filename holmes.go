@@ -330,11 +330,11 @@ func (h *Holmes) startDumpLoop() {
 				continue
 			}
 
-			h.goroutineCheckAndDump(gNum)
 			h.memCheckAndDump(mem)
 			h.cpuCheckAndDump(cpu)
 			h.threadCheckAndDump(tNum)
 			h.threadCheckAndShrink(tNum)
+			h.goroutineCheckAndDump(gNum)
 		}
 	}
 }
@@ -467,7 +467,23 @@ func (h *Holmes) threadCheckAndDump(threadNum int) {
 	if triggered := h.threadProfile(threadNum, threadOpts); triggered {
 		h.threadCoolDownTime = time.Now().Add(threadOpts.CoolDown)
 		h.threadTriggerCount++
+
+		// optimize: https://github.com/mosn/holmes/issues/84
+		// Thread dump information contains goroutine information
+		// skip goroutine dump
+		h.goroutineCoolDownByThread()
 	}
+}
+
+// The thread dump is triggered while operating goroutine dump CoolDown .
+// Thread dump information contains goroutine information .
+func (h *Holmes) goroutineCoolDownByThread() {
+	grOpts := h.opts.GetGrOpts()
+	if !grOpts.Enable {
+		return
+	}
+
+	h.grCoolDownTime = time.Now().Add(grOpts.CoolDown)
 }
 
 // TODO: better only shrink the threads that are idle.
