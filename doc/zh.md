@@ -93,7 +93,7 @@ h.Start()
 h.Stop()
 ```
 
-* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
+* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于10s。
 * WithDumpPath("/tmp") profile文件保存路径。
 * WithTextDump() 以文本格式保存profile内容。
 * WithDumpToLogger() profile内容将会输出到日志。
@@ -124,7 +124,7 @@ h.Start()
 h.Stop()
 ```
 
-* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于1s。
+* WithCollectInterval("5s") 每5s采集一次当前应用的各项指标，该值建议设置为大于10s。
 * WithDumpPath("/tmp") profile文件保存路径。
 * cpu profile支持保存文件，不支持输出到日志中，所以WithBinaryDump()和 WithTextDump()在这场景会失效。
 * WithCPUDump(10, 25, 80, time.Minute) 会在满足以下条件时dump profile cpu usage > `10%` &&
