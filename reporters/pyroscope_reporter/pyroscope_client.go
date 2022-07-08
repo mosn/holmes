@@ -78,18 +78,18 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 
 	writer := multipart.NewWriter(body)
 	fw, err := writer.CreateFormFile("profile", "profile.pprof")
-	fw.Write(j.Profile)
+	fw.Write(j.Profile) // nolint: errcheck
 	if err != nil {
 		return err
 	}
 	if j.PrevProfile != nil {
 		fw, err = writer.CreateFormFile("prev_profile", "profile.pprof")
-		fw.Write(j.PrevProfile)
+		fw.Write(j.PrevProfile) // nolint: errcheck
 		if err != nil {
 			return err
 		}
 	}
-	writer.Close()
+	writer.Close() // nolint: errcheck
 
 	q := u.Query()
 	q.Set("name", j.Name)
@@ -126,10 +126,12 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 	if err != nil {
 		return fmt.Errorf("do http request: %v", err)
 	}
-	defer response.Body.Close()
+	defer response.Body.Close() // nolint: errcheck
 
 	// read all the response body
-	_, err = ioutil.ReadAll(response.Body)
+	respData := []byte{}
+	respData, err = ioutil.ReadAll(response.Body)
+	r.Logger.Debugf("resp is %s", string(respData))
 	if err != nil {
 		return fmt.Errorf("read response body: %v", err)
 	}
@@ -147,7 +149,7 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 func (r *PyroscopeReporter) Report(ptype string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
 	endTime := sampleTime.Truncate(DefaultUploadRate)
 	startTime := endTime.Add(-DefaultUploadRate)
-
+	_, _, _, _ = ptype, filename, reason, eventID
 	j := &UploadJob{
 		Name:            r.AppName,
 		StartTime:       startTime,
