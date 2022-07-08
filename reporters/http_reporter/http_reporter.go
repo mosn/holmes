@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"time"
 
 	"mosn.io/holmes"
 )
@@ -45,7 +46,7 @@ func NewReporter(token string, url string) holmes.ProfileReporter {
 	}
 }
 
-func (r *HttpReporter) Report(ptype string, filename string, reason string, eventID string) error {
+func (r *HttpReporter) Report(ptype string, filename string, reason string, eventID string, tt time.Time, bts []byte) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 

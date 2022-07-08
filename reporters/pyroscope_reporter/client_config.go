@@ -30,7 +30,6 @@ var (
 	ErrCloudTokenRequired = errors.New("Please provide an authentication token. You can find it here: https://pyroscope.io/cloud")
 	ErrUpload             = errors.New("Failed to upload a profile")
 	ErrUpgradeServer      = errors.New("Newer version of pyroscope server required (>= v0.3.1). Visit https://pyroscope.io/docs/golang/ for more information")
-	cloudHostnameSuffix   = "pyroscope.cloud"
 )
 
 const (

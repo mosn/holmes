@@ -129,9 +129,7 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 	defer response.Body.Close() // nolint: errcheck
 
 	// read all the response body
-	respData := []byte{}
-	respData, err = ioutil.ReadAll(response.Body)
-	r.Logger.Debugf("resp is %s", string(respData))
+	_, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("read response body: %v", err)
 	}
