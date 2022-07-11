@@ -185,6 +185,13 @@ You can use `Reporter` to implement the following features:
 )
   
 ```
+
+#### Enable holmes as pyroscope client
+
+Holmes supports to upload your profile to [pyroscope](https://github.com/pyroscope-io/pyroscope) server. More details
+click [here](./example/pyroscope_rideshare/README.md) please.
+
+Noted that **NOT** set `TextDump` when you enable holmes as pyroscope client.
   
 ### Enable them all!
 
