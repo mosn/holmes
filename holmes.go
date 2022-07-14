@@ -717,8 +717,8 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 		NotSupportTypeMaxConfig, h.gcHeapStats, gc)
 
-	// gcTriggerCount only increased after got both two profiles
-	eventID := fmt.Sprintf("heap-%d", h.grTriggerCount)
+	// gcHeapTriggerCount only increased after got both two profiles
+	eventID := fmt.Sprintf("heap-%d", h.gcHeapTriggerCount)
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
