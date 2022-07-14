@@ -224,7 +224,8 @@ h, _ := holmes.New(
 
 ## known risks
 
-Collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the STW.
+If golang version < 1.19, collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the long time STW.
+At golang 1.19, it has been optz by concurrent way at this [PR](https://github.com/golang/go/commit/52bd1c4d6cc691aa60c71513695dba03062deb59).
 
 ## Show cases
 [Click here](./doc/example.md)
