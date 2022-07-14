@@ -193,8 +193,27 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
 	suffix := time.Now().Format("20060102150405.000") + ".log"
+	if len(eventID) == 0 {
+		return path.Join(filePath, check2name[dumpType]+"."+suffix)
+	}
 
 	return path.Join(filePath, check2name[dumpType]+"."+eventID+"."+suffix)
+}
+
+// fix #89
+func getBinaryFileNameAndCreate(dump string, dumpType configureType, eventID string) (*os.File, string, error) {
+	filepath := getBinaryFileName(dump, dumpType, eventID)
+	f, err := os.OpenFile(filepath, defaultLoggerFlags, defaultLoggerPerm)
+	if err != nil && os.IsNotExist(err) {
+		if err = os.MkdirAll(dump, 0o755); err != nil {
+			return nil, filepath, err
+		}
+		f, err = os.OpenFile(filepath, defaultLoggerFlags, defaultLoggerPerm)
+		if err != nil {
+			return nil, filepath, err
+		}
+	}
+	return f, filepath, err
 }
 
 func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions, eventID string) (string, error) {
@@ -212,9 +231,7 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions,
 		buf = data.Bytes()
 	}
 
-	fileName := getBinaryFileName(dumpOpts.DumpPath, dumpType, eventID)
-
-	file, err := os.OpenFile(fileName, defaultLoggerFlags, defaultLoggerPerm) // nolint:gosec
+	file, fileName, err := getBinaryFileNameAndCreate(dumpOpts.DumpPath, dumpType, eventID)
 	if err != nil {
 		return fileName, fmt.Errorf("pprof %v open file failed : %w", type2name[dumpType], err)
 	}
