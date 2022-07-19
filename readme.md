@@ -72,7 +72,7 @@ h.Stop()
 * WithGoroutineDump(10, 25, 2000, 100*1000,time.Minute) means dump will happen when current_goroutine_num > 10 && 
   current_goroutine_num < `100*1000` && current_goroutine_num > `125%` * previous_average_goroutine_num or current_goroutine_num > `2000`,
   `time.Minute` means once a dump happened, the next dump will not happen before cooldown
-  finish-1 minute.
+  finish-1 minute, if `abs` and `diff` is 0 meaning disable it, if `abs` and `diff` is 0 meaning disable it.
   > WithGoroutineDump(min int, diff int, abs int, max int, coolDown time.Duration)
   > 100*1000 means max goroutine number, when current goroutines number is greater 100k, holmes would not 
   > dump goroutine profile. Cuz if goroutine num is huge, e.g, 100k goroutine dump will also become a 
@@ -103,7 +103,7 @@ h.Stop()
 * WithCPUDump(10, 25, 80,time.Minute) means dump will happen when cpu usage > `10%` && 
   cpu usage > `125%` * previous cpu usage recorded or cpu usage > `80%`.
   `time.Minute` means once a dump happened, the next dump will not happen before
-  cooldown finish-1 minute.
+  cooldown finish-1 minute, if `abs` and `diff` is 0 meaning disable it.
 * WithCPUMax means holmes would not dump all types profile when current cpu 
   usage percent is greater than CPUMaxPercent.  
 
@@ -132,7 +132,7 @@ h.Stop()
 * WithMemDump(30, 25, 80, time.Minute) means dump will happen when memory usage > `10%` && 
   memory usage > `125%` * previous memory usage or memory usage > `80%`. 
   `time.Minute` means once a dump happened, the next dump will not happen before
-  cooldown finish-1 minute.
+  cooldown finish-1 minute, if `abs` and `diff` is 0 meaning disable it.
   
 ### Dump heap profile when RSS spikes based GC cycle
 

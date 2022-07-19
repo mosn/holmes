@@ -179,14 +179,16 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 	}
 
 	// the current peak load exceed the absolute value
-	if curVal > ruleAbs {
+	if curVal > ruleAbs && ruleAbs!=0{
 		return true, fmt.Sprintf("curVal [%d] > ruleAbs [%d]", curVal, ruleAbs)
 	}
 
 	// the peak load matches the rule
-	avg := history.avg()
-	if curVal >= avg*(100+ruleDiff)/100 {
-		return true, fmt.Sprintf("curVal[%d] >= avg[%d]*(100+ruleDiff)/100", curVal, avg)
+	if ruleDiff != 0{
+		avg := history.avg()
+		if curVal >= avg*(100+ruleDiff)/100 {
+			return true, fmt.Sprintf("curVal[%d] >= avg[%d]*(100+ruleDiff)/100", curVal, avg)
+		}
 	}
 	return false, ""
 }
