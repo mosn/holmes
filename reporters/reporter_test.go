@@ -47,7 +47,7 @@ var cpuReportCount int
 type mockReporter struct {
 }
 
-func (m *mockReporter) Report(pType string, filename string, reason string, eventID string) error {
+func (m *mockReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
 	log.Printf("call %s , filename %s report \n", pType, filename)
 
 	// read filename
@@ -66,7 +66,7 @@ var grReopenReportCount int
 type mockReopenReporter struct {
 }
 
-func (m *mockReopenReporter) Report(pType string, filename string, reason string, eventID string) error {
+func (m *mockReopenReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
 	log.Printf("call %s report \n", pType)
 
 	switch pType {
