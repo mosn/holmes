@@ -197,7 +197,7 @@ h, _ := holmes.New(
     holmes.WithTextDump(),
 
     holmes.WithCPUDump(10, 25, 80, time.Minute),
-    //holmes.WithMemDump(30, 25, 80, time.Minute),
+    holmes.WithMemDump(30, 25, 80, time.Minute),
     holmes.WithGCHeapDump(10, 20, 40, time.Minute),
     holmes.WithGoroutineDump(500, 25, 20000, 0,time.Minute),
 )
