@@ -762,7 +762,7 @@ func (h *Holmes) initEnvironment() {
 
 func (h *Holmes) EnableDump(curCPU int) (err error) {
 	if h.opts.CPUMaxPercent != 0 && curCPU >= h.opts.CPUMaxPercent {
-		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", cpu, h.opts.CPUMaxPercent)
+		return fmt.Errorf("current cpu percent [%v] is greater than the CPUMaxPercent [%v]", curCPU, h.opts.CPUMaxPercent)
 	}
 	return nil
 }
