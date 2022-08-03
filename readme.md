@@ -185,6 +185,13 @@ You can use `Reporter` to implement the following features:
 )
   
 ```
+
+#### Enable holmes as pyroscope client
+
+Holmes supports to upload your profile to [pyroscope](https://github.com/pyroscope-io/pyroscope) server. More details
+click [here](./example/pyroscope_rideshare/README.md) please.
+
+Noted that **NOT** set `TextDump` when you enable holmes as pyroscope client.
   
 ### Enable them all!
 
@@ -224,7 +231,8 @@ h, _ := holmes.New(
 
 ## known risks
 
-Collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the STW.
+If golang version < 1.19, collect a goroutine itself [may cause latency spike](https://github.com/golang/go/issues/33250) because of the long time STW.
+At golang 1.19, it has been optz by concurrent way at this [CL](https://go-review.googlesource.com/c/go/+/387415/).
 
 ## Show cases
 [Click here](./doc/example.md)
