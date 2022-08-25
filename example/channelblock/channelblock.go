@@ -27,7 +27,7 @@ import (
 
 func init() {
 	http.HandleFunc("/chanblock", channelBlock)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {

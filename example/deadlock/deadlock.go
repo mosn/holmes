@@ -30,7 +30,7 @@ func init() {
 	http.HandleFunc("/lockorder1", lockorder1)
 	http.HandleFunc("/lockorder2", lockorder2)
 	http.HandleFunc("/req", req)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {

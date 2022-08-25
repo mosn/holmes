@@ -28,7 +28,7 @@ func init() {
 	http.HandleFunc("/docker", dockermake1gb)
 	http.HandleFunc("/docker/cpu", cpuex)
 	http.HandleFunc("/docker/cpu_multi_core", cpuMulticore)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {
@@ -47,19 +47,30 @@ func main() {
 }
 
 func cpuex(wr http.ResponseWriter, req *http.Request) {
-	go func() {
-		for {
+	for {
+		select {
+		case <-req.Context().Done():
+			break
+		default:
+			time.Sleep(time.Millisecond)
 		}
-	}()
+	}
 }
 
 func cpuMulticore(wr http.ResponseWriter, req *http.Request) {
 	for i := 1; i <= 100; i++ {
 		go func() {
 			for {
+				select {
+				case <-req.Context().Done():
+				default:
+					time.Sleep(time.Millisecond)
+				}
 			}
 		}()
 	}
+
+	<-req.Context().Done()
 }
 
 func dockermake1gb(wr http.ResponseWriter, req *http.Request) {

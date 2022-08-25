@@ -19,6 +19,7 @@ package http_reporter
 
 import (
 	"log"
+	"mosn.io/holmes"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestHttpReporter_Report(t *testing.T) {
 
 	reporter := NewReporter("test", "http://127.0.0.1:8080/profile/upload")
 
-	if err := reporter.Report("goroutine", "reporter_filename_test", "test", "test-id", time.Now(), []byte{}); err != nil {
+	if err := reporter.Report("goroutine", "reporter_filename_test", holmes.ReasonCurlGreaterMin, "test-id", time.Now(), []byte{}, holmes.Scene{}); err != nil {
 		log.Fatalf("failed to report: %v", err)
 	}
 }
@@ -38,7 +39,7 @@ func TestHttpReporter_Report(t *testing.T) {
 func newMockServer() {
 	r := gin.New()
 	r.POST("/profile/upload", ProfileUploadHandler)
-	go r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	go r.Run() //nolint:errcheck // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
 	time.Sleep(time.Millisecond * 100)
 }
@@ -48,5 +49,4 @@ func ProfileUploadHandler(c *gin.Context) {
 	ret["code"] = 1
 	ret["message"] = "success"
 	c.JSON(200, ret)
-	return
 }

@@ -28,7 +28,7 @@ import (
 
 func init() {
 	http.HandleFunc("/alloc", alloc)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {

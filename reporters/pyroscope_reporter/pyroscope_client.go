@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
+	"mosn.io/holmes"
 	"net/http"
 	"net/url"
 	"path"
@@ -144,10 +145,10 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 	return nil
 }
 
-func (r *PyroscopeReporter) Report(ptype string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
+func (r *PyroscopeReporter) Report(ptype string, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
 	endTime := sampleTime.Truncate(DefaultUploadRate)
 	startTime := endTime.Add(-DefaultUploadRate)
-	_, _, _, _ = ptype, filename, reason, eventID
+	_, _, _, _, _ = ptype, filename, reason, eventID, scene
 	j := &UploadJob{
 		Name:            r.AppName,
 		StartTime:       startTime,

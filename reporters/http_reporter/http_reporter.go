@@ -46,7 +46,7 @@ func NewReporter(token string, url string) holmes.ProfileReporter {
 	}
 }
 
-func (r *HttpReporter) Report(ptype string, filename string, reason string, eventID string, tt time.Time, bts []byte) error {
+func (r *HttpReporter) Report(ptype string, filename string, reason holmes.ReasonType, eventID string, tt time.Time, bts []byte, scene holmes.Scene) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -67,11 +67,11 @@ func (r *HttpReporter) Report(ptype string, filename string, reason string, even
 		return fmt.Errorf("write buf to file part err: %v", err)
 	}
 
-	writer.WriteField("token", r.token)      // nolint: errcheck
-	writer.WriteField("profile_type", ptype) // nolint: errcheck
-	writer.WriteField("event_id", eventID)   // nolint: errcheck
-	writer.WriteField("comment", reason)     // nolint: errcheck
-	writer.Close()                           // nolint: errcheck
+	writer.WriteField("token", r.token)           // nolint: errcheck
+	writer.WriteField("profile_type", ptype)      // nolint: errcheck
+	writer.WriteField("event_id", eventID)        // nolint: errcheck
+	writer.WriteField("comment", reason.String()) // nolint: errcheck
+	writer.Close()                                // nolint: errcheck
 	request, err := http.NewRequest("POST", r.url, body)
 	if err != nil {
 		return fmt.Errorf("NewRequest err: %v", err)

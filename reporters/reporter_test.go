@@ -19,6 +19,7 @@ package reporters
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -38,7 +39,7 @@ func TestMain(m *testing.M) {
 	h.EnableGoroutineDump().EnableCPUDump().Start()
 	time.Sleep(11 * time.Second)
 	log.Println("on running")
-	m.Run()
+	os.Exit(m.Run())
 }
 
 var grReportCount int
@@ -47,7 +48,7 @@ var cpuReportCount int
 type mockReporter struct {
 }
 
-func (m *mockReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
+func (m *mockReporter) Report(pType string, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
 	log.Printf("call %s , filename %s report \n", pType, filename)
 
 	// read filename
@@ -66,7 +67,7 @@ var grReopenReportCount int
 type mockReopenReporter struct {
 }
 
-func (m *mockReopenReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
+func (m *mockReopenReporter) Report(pType string, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
 	log.Printf("call %s report \n", pType)
 
 	switch pType {
@@ -104,7 +105,7 @@ func TestReporter(t *testing.T) {
 	h.Stop()
 	h.Start()
 	grReopenReportCount = 0
-	h.Set(
+	_ = h.Set(
 		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
@@ -146,7 +147,7 @@ func TestReporterReopen(t *testing.T) {
 	h.EnableProfileReporter()
 
 	grReopenReportCount = 0
-	h.Set(
+	_ = h.Set(
 		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 

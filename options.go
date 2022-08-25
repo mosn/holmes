@@ -67,16 +67,6 @@ type options struct {
 	rptOpts *ReporterOptions
 }
 
-// rptEvent stands of the args of report event
-type rptEvent struct {
-	PType      string
-	FileName   string
-	Reason     string
-	EventID    string
-	SampleTime time.Time
-	PprofBytes []byte
-}
-
 type ReporterOptions struct {
 	reporter ProfileReporter
 	active   int32 // switch
