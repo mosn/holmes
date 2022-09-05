@@ -879,7 +879,7 @@ func (h *Holmes) startReporter(ch chan rptEvent) {
 			// It's supposed to be sending judgment, isn't it?
 			err := opts.reporter.Report(evt.PType, evt.FileName, evt.Reason, evt.EventID, evt.SampleTime, evt.PprofBytes, evt.Scene) // nolint: errcheck
 			if err != nil {
-				h.Infof("reporter err:", err)
+				h.Infof("reporter err:%v", err)
 
 			}
 		}

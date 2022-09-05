@@ -190,13 +190,13 @@ h.Stop()
 ### Dump事件上报
 
 您可以通过实现`Reporter` 来实现以下功能：
-* 发送告警信息，当`holmes`触发`Dump`操作时。
+* 发送包含现场的告警信息，当`holmes`触发`Dump`操作时。
 * 将`Profiles`上传到其他地方，以防实例被销毁，从而导致profile丢失，或进行分析。
 
 ```go
         type ReporterImpl struct{}
-        func (r *ReporterImpl) Report(pType string, buf []byte, reason string, eventID string) error{
-            // do something	
+        func (r *ReporterImpl) 	Report(pType string, filename string, reason ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene Scene) error{ 
+			// do something	
         }
         ......
         r := &ReporterImpl{} // a implement of holmes.ProfileReporter Interface.

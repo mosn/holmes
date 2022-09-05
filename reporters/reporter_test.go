@@ -18,6 +18,7 @@
 package reporters
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -44,6 +45,8 @@ func TestMain(m *testing.M) {
 
 var grReportCount int
 var cpuReportCount int
+var unknownReasonTypeErr error
+var sceneException error
 
 type mockReporter struct {
 }
@@ -58,6 +61,31 @@ func (m *mockReporter) Report(pType string, filename string, reason holmes.Reaso
 	case "cpu":
 		cpuReportCount++
 
+	}
+
+	if len(reason.String()) == 0 { // unknown reason type
+		unknownReasonTypeErr = fmt.Errorf("reporter: unknown reason type")
+		return unknownReasonTypeErr
+	}
+
+	{ // test scene
+		errPrefix := "reporter: scene exception ==> "
+		if scene.CurVal == 0 {
+			sceneException = fmt.Errorf(errPrefix + "current value is 0")
+			return sceneException
+		}
+		if scene.TriggerMin == 0 {
+			sceneException = fmt.Errorf(errPrefix + "min in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerAbs == 0 {
+			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerDiff == 0 {
+			sceneException = fmt.Errorf(errPrefix + "diff in configuration is 0")
+			return sceneException
+		}
 	}
 	return nil
 }
@@ -74,17 +102,45 @@ func (m *mockReopenReporter) Report(pType string, filename string, reason holmes
 	case "goroutine":
 		grReopenReportCount++
 	}
+
+	if len(reason.String()) == 0 { // unknown reason type
+		unknownReasonTypeErr = fmt.Errorf("reopen reporter: unknown reason type")
+		return unknownReasonTypeErr
+	}
+
+	{ // test scene
+		errPrefix := "reopen reporter: scene exception ==> "
+		if scene.CurVal == 0 {
+			sceneException = fmt.Errorf(errPrefix + "current value is 0")
+			return sceneException
+		}
+		if scene.TriggerMin == 0 {
+			sceneException = fmt.Errorf(errPrefix + "min in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerAbs == 0 {
+			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerDiff == 0 {
+			sceneException = fmt.Errorf(errPrefix + "diff in configuration is 0")
+			return sceneException
+		}
+	}
 	return nil
 }
 
 func TestReporter(t *testing.T) {
 	grReportCount = 0
 	cpuReportCount = 0
+	unknownReasonTypeErr = nil
+	sceneException = nil
+
 	r := &mockReporter{}
 	err := h.Set(
 		holmes.WithProfileReporter(r),
 		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
-		holmes.WithCPUDump(0, 2, 80, time.Second),
+		holmes.WithCPUDump(1, 2, 80, time.Second),
 		holmes.WithCollectInterval("5s"),
 	)
 	if err != nil {
@@ -99,6 +155,14 @@ func TestReporter(t *testing.T) {
 
 	if cpuReportCount == 0 {
 		log.Fatalf("not cpuReport")
+	}
+
+	if unknownReasonTypeErr != nil {
+		log.Fatalf(unknownReasonTypeErr.Error())
+	}
+
+	if sceneException != nil {
+		log.Fatalf(sceneException.Error())
 	}
 
 	// test reopen feature
@@ -160,8 +224,14 @@ func TestReporterReopen(t *testing.T) {
 
 func cpuex() {
 	go func() {
+		var ch = make(chan struct{})
 		for {
-			time.Sleep(time.Millisecond)
+			select {
+			case <-ch:
+				// do nothing
+			default:
+				continue
+			}
 		}
 	}()
 }
