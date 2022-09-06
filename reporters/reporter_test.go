@@ -70,14 +70,6 @@ func (m *mockReporter) Report(pType string, filename string, reason holmes.Reaso
 
 	{ // test scene
 		errPrefix := "reporter: scene exception ==> "
-		if scene.CurVal == 0 {
-			sceneException = fmt.Errorf(errPrefix + "current value is 0")
-			return sceneException
-		}
-		if scene.TriggerMin == 0 {
-			sceneException = fmt.Errorf(errPrefix + "min in configuration is 0")
-			return sceneException
-		}
 		if scene.TriggerAbs == 0 {
 			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
 			return sceneException
@@ -110,14 +102,6 @@ func (m *mockReopenReporter) Report(pType string, filename string, reason holmes
 
 	{ // test scene
 		errPrefix := "reopen reporter: scene exception ==> "
-		if scene.CurVal == 0 {
-			sceneException = fmt.Errorf(errPrefix + "current value is 0")
-			return sceneException
-		}
-		if scene.TriggerMin == 0 {
-			sceneException = fmt.Errorf(errPrefix + "min in configuration is 0")
-			return sceneException
-		}
 		if scene.TriggerAbs == 0 {
 			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
 			return sceneException
@@ -140,7 +124,7 @@ func TestReporter(t *testing.T) {
 	err := h.Set(
 		holmes.WithProfileReporter(r),
 		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
-		holmes.WithCPUDump(1, 2, 80, time.Second),
+		holmes.WithCPUDump(0, 2, 80, time.Second),
 		holmes.WithCollectInterval("5s"),
 	)
 	if err != nil {
