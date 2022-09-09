@@ -2,6 +2,7 @@ package pyroscope_reporter
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func TestMain(m *testing.M) {
 	time.Sleep(11 * time.Second)
 	log.Println("on running")
 	newMockServer()
-	m.Run()
+	os.Exit(m.Run())
 }
 
 var received = false
@@ -71,7 +72,7 @@ func cpuex() {
 func newMockServer() {
 	r := gin.New()
 	r.POST("/ingest", ProfileUploadHandler)
-	go r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	go r.Run() //nolint:errcheck // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 
 	time.Sleep(time.Millisecond * 100)
 }
@@ -82,5 +83,4 @@ func ProfileUploadHandler(c *gin.Context) {
 	ret["message"] = "success"
 	c.JSON(200, ret)
 	received = true
-	return
 }

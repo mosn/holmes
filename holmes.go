@@ -71,10 +71,6 @@ type Holmes struct {
 	rptEventsCh chan rptEvent
 }
 
-type ProfileReporter interface {
-	Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error
-}
-
 // New creates a holmes dumper.
 func New(opts ...Option) (*Holmes, error) {
 	holmes := &Holmes{
@@ -375,8 +371,14 @@ func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
+	scene := Scene{
+		typeOption: *c.typeOption,
+		CurVal:     gNum,
+		Avg:        h.grNumStats.avg(),
+	}
+
 	h.ReportProfile(type2name[goroutine], h.writeProfileDataToFile(buf, goroutine, ""),
-		reason, "", time.Now(), buf.Bytes())
+		reason, "", time.Now(), buf.Bytes(), scene)
 	return true
 }
 
@@ -417,7 +419,13 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
-	h.ReportProfile(type2name[mem], h.writeProfileDataToFile(buf, mem, ""), reason, "", time.Now(), buf.Bytes())
+	scene := Scene{
+		typeOption: c,
+		CurVal:     rss,
+		Avg:        h.memStats.avg(),
+	}
+
+	h.ReportProfile(type2name[mem], h.writeProfileDataToFile(buf, mem, ""), reason, "", time.Now(), buf.Bytes(), scene)
 	return true
 }
 
@@ -537,14 +545,20 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 
 	_ = pprof.Lookup("threadcreate").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
+	scene := Scene{
+		typeOption: c,
+		CurVal:     curThreadNum,
+		Avg:        h.threadStats.avg(),
+	}
+
 	h.ReportProfile(type2name[thread], h.writeProfileDataToFile(buf, thread, eventID),
-		reason, eventID, time.Now(), buf.Bytes())
+		reason, eventID, time.Now(), buf.Bytes(), scene)
 
 	buf.Reset()
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
 	h.ReportProfile(type2name[goroutine], h.writeProfileDataToFile(buf, goroutine, eventID),
-		reason, eventID, time.Now(), buf.Bytes())
+		reason, eventID, time.Now(), buf.Bytes(), scene)
 
 	return true
 }
@@ -613,9 +627,15 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		h.Infof("[Holmes] CPU profile name : " + "::" + binFileName + " \n" + string(bfCpy))
 	}
 
+	scene := Scene{
+		typeOption: c,
+		CurVal:     curCPUUsage,
+		Avg:        h.cpuStats.avg(),
+	}
+
 	if rptOpts.active == 1 {
 		h.ReportProfile(type2name[cpu], binFileName,
-			reason, "", time.Now(), bfCpy)
+			reason, "", time.Now(), bfCpy, scene)
 	}
 
 	return true
@@ -731,8 +751,14 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 	var buf bytes.Buffer
 	_ = pprof.Lookup("heap").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
 
+	scene := Scene{
+		typeOption: c,
+		CurVal:     gc,
+		Avg:        h.gcHeapStats.avg(),
+	}
+
 	h.ReportProfile(type2name[gcHeap], h.writeProfileDataToFile(buf, gcHeap, eventID),
-		reason, eventID, time.Now(), buf.Bytes())
+		reason, eventID, time.Now(), buf.Bytes(), scene)
 	return true
 }
 
@@ -793,9 +819,9 @@ func (h *Holmes) EnableProfileReporter() {
 	atomic.StoreInt32(&h.opts.rptOpts.active, 1)
 }
 
-func (h *Holmes) ReportProfile(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) {
+func (h *Holmes) ReportProfile(pType string, filename string, reason ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene Scene) {
 	if filename == "" {
-		h.Errorf("dump name is empty, type:%s, reason:%s, eventID:%s", pType, reason, eventID)
+		h.Errorf("dump name is empty, type:%s, reason:%s, eventID:%s", pType, reason.String(), eventID)
 		return
 	}
 
@@ -821,6 +847,7 @@ func (h *Holmes) ReportProfile(pType string, filename string, reason string, eve
 		EventID:    eventID,
 		SampleTime: sampleTime,
 		PprofBytes: pprofBytes,
+		Scene:      scene,
 	}
 
 	// read channel should be atomic.
@@ -850,9 +877,9 @@ func (h *Holmes) startReporter(ch chan rptEvent) {
 			}
 
 			// It's supposed to be sending judgment, isn't it?
-			err := opts.reporter.Report(evt.PType, evt.FileName, evt.Reason, evt.EventID, evt.SampleTime, evt.PprofBytes) // nolint: errcheck
+			err := opts.reporter.Report(evt.PType, evt.FileName, evt.Reason, evt.EventID, evt.SampleTime, evt.PprofBytes, evt.Scene) // nolint: errcheck
 			if err != nil {
-				h.Infof("reporter err:", err)
+				h.Infof("reporter err:%v", err)
 
 			}
 		}

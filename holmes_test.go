@@ -19,6 +19,7 @@ package holmes
 
 import (
 	"log"
+	"os"
 	"runtime"
 	"testing"
 	"time"
@@ -37,15 +38,15 @@ func TestMain(m *testing.M) {
 	h.EnableGoroutineDump().Start()
 	time.Sleep(10 * time.Second)
 	log.Println("on running")
-	m.Run()
+	os.Exit(m.Run())
 }
 
 // -gcflags=all=-l
 func TestResetCollectInterval(t *testing.T) {
 	before := h.collectCount
 	go func() {
-		h.Set(WithCollectInterval("2s"))
-		defer h.Set(WithCollectInterval("1s"))
+		h.Set(WithCollectInterval("2s"))       //nolint:errcheck
+		defer h.Set(WithCollectInterval("1s")) //nolint:errcheck
 		time.Sleep(6 * time.Second)
 		// if collect interval not change, collectCount would increase 5 at least
 		if h.collectCount-before >= 5 {
@@ -74,7 +75,7 @@ func TestSetGrOpts(t *testing.T) {
 }
 
 func TestCpuCore(t *testing.T) {
-	h.Set(
+	_ = h.Set(
 		WithCGroup(false),
 		WithGoProcAsCPUCore(false),
 	)
@@ -96,7 +97,7 @@ func TestCpuCore(t *testing.T) {
 	}
 
 	// set cpu core directly
-	h.Set(
+	_ = h.Set(
 		WithCPUCore(cpuCore1 + 5),
 	)
 

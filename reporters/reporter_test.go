@@ -18,7 +18,9 @@
 package reporters
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -38,16 +40,18 @@ func TestMain(m *testing.M) {
 	h.EnableGoroutineDump().EnableCPUDump().Start()
 	time.Sleep(11 * time.Second)
 	log.Println("on running")
-	m.Run()
+	os.Exit(m.Run())
 }
 
 var grReportCount int
 var cpuReportCount int
+var unknownReasonTypeErr error
+var sceneException error
 
 type mockReporter struct {
 }
 
-func (m *mockReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
+func (m *mockReporter) Report(pType string, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
 	log.Printf("call %s , filename %s report \n", pType, filename)
 
 	// read filename
@@ -58,6 +62,23 @@ func (m *mockReporter) Report(pType string, filename string, reason string, even
 		cpuReportCount++
 
 	}
+
+	if len(reason.String()) == 0 { // unknown reason type
+		unknownReasonTypeErr = fmt.Errorf("reporter: unknown reason type")
+		return unknownReasonTypeErr
+	}
+
+	{ // test scene
+		errPrefix := "reporter: scene exception ==> "
+		if scene.TriggerAbs == 0 {
+			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerDiff == 0 {
+			sceneException = fmt.Errorf(errPrefix + "diff in configuration is 0")
+			return sceneException
+		}
+	}
 	return nil
 }
 
@@ -66,12 +87,29 @@ var grReopenReportCount int
 type mockReopenReporter struct {
 }
 
-func (m *mockReopenReporter) Report(pType string, filename string, reason string, eventID string, sampleTime time.Time, pprofBytes []byte) error {
+func (m *mockReopenReporter) Report(pType string, filename string, reason holmes.ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene holmes.Scene) error {
 	log.Printf("call %s report \n", pType)
 
 	switch pType {
 	case "goroutine":
 		grReopenReportCount++
+	}
+
+	if len(reason.String()) == 0 { // unknown reason type
+		unknownReasonTypeErr = fmt.Errorf("reopen reporter: unknown reason type")
+		return unknownReasonTypeErr
+	}
+
+	{ // test scene
+		errPrefix := "reopen reporter: scene exception ==> "
+		if scene.TriggerAbs == 0 {
+			sceneException = fmt.Errorf(errPrefix + "abs in configuration is 0")
+			return sceneException
+		}
+		if scene.TriggerDiff == 0 {
+			sceneException = fmt.Errorf(errPrefix + "diff in configuration is 0")
+			return sceneException
+		}
 	}
 	return nil
 }
@@ -79,6 +117,9 @@ func (m *mockReopenReporter) Report(pType string, filename string, reason string
 func TestReporter(t *testing.T) {
 	grReportCount = 0
 	cpuReportCount = 0
+	unknownReasonTypeErr = nil
+	sceneException = nil
+
 	r := &mockReporter{}
 	err := h.Set(
 		holmes.WithProfileReporter(r),
@@ -100,11 +141,19 @@ func TestReporter(t *testing.T) {
 		log.Fatalf("not cpuReport")
 	}
 
+	if unknownReasonTypeErr != nil {
+		log.Fatalf(unknownReasonTypeErr.Error())
+	}
+
+	if sceneException != nil {
+		log.Fatalf(sceneException.Error())
+	}
+
 	// test reopen feature
 	h.Stop()
 	h.Start()
 	grReopenReportCount = 0
-	h.Set(
+	_ = h.Set(
 		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
@@ -146,7 +195,7 @@ func TestReporterReopen(t *testing.T) {
 	h.EnableProfileReporter()
 
 	grReopenReportCount = 0
-	h.Set(
+	_ = h.Set(
 		holmes.WithProfileReporter(&mockReopenReporter{}))
 	time.Sleep(10 * time.Second)
 
@@ -159,8 +208,14 @@ func TestReporterReopen(t *testing.T) {
 
 func cpuex() {
 	go func() {
+		var ch = make(chan struct{})
 		for {
-			time.Sleep(time.Millisecond)
+			select {
+			case <-ch:
+				// do nothing
+			default:
+				continue
+			}
 		}
 	}()
 }

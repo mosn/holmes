@@ -27,7 +27,7 @@ import (
 
 func init() {
 	http.HandleFunc("/make1gb", make1gbslice)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {

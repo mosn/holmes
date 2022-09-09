@@ -167,28 +167,31 @@ func collect(cpuCore float64, memoryLimit uint64) (int, int, int, int, error) {
 	return int(cpuPercent), int(memPercent), gNum, tNum, nil
 }
 
-func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (bool, string) {
+func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (bool, ReasonType) {
 	// should bigger than rule min
 	if curVal < ruleMin {
-		return false, fmt.Sprintf("curVal [%d]< ruleMin [%d]", curVal, ruleMin)
+		return false, ReasonCurlLessMin
+		//fmt.Sprintf("curVal [%d]< ruleMin [%d]", curVal, ruleMin)
 	}
 
 	// if ruleMax is enable and current value bigger max, skip dumping
 	if ruleMax != NotSupportTypeMaxConfig && curVal >= ruleMax {
-		return false, ""
+		return false, ReasonCurGreaterMax
 	}
 
 	// the current peak load exceed the absolute value
 	if curVal > ruleAbs {
-		return true, fmt.Sprintf("curVal [%d] > ruleAbs [%d]", curVal, ruleAbs)
+		return true, ReasonCurGreaterAbs
+		// fmt.Sprintf("curVal [%d] > ruleAbs [%d]", curVal, ruleAbs)
 	}
 
 	// the peak load matches the rule
 	avg := history.avg()
 	if curVal >= avg*(100+ruleDiff)/100 {
-		return true, fmt.Sprintf("curVal[%d] >= avg[%d]*(100+ruleDiff)/100", curVal, avg)
+		return true, ReasonDiff
+		// fmt.Sprintf("curVal[%d] >= avg[%d]*(100+ruleDiff)/100", curVal, avg)
 	}
-	return false, ""
+	return false, ReasonCurlGreaterMin
 }
 
 func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {

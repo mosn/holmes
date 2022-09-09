@@ -165,12 +165,12 @@ You can use `Set` method to modify holmes' configurations when the application i
 ### Reporter dump event
 
 You can use `Reporter` to implement the following features:
-* Send alarm messages when holmes dump profiles.
+* Send alarm messages that include the scene information when holmes dump profiles.
 * Send profiles to the data center for saving or analyzing.
 
 ```go
         type ReporterImpl struct{}
-        func (r *ReporterImpl) Report(pType string, buf []byte, reason string, eventID string) error{
+        func (r *ReporterImpl) 	Report(pType string, filename string, reason ReasonType, eventID string, sampleTime time.Time, pprofBytes []byte, scene Scene) error{
             // do something	
         }
         ......

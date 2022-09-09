@@ -26,7 +26,7 @@ import (
 
 func init() {
 	http.HandleFunc("/leak", leak)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {

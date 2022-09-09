@@ -27,7 +27,7 @@ import (
 
 func init() {
 	http.HandleFunc("/deadloop", deadloop)
-	go http.ListenAndServe(":10003", nil)
+	go http.ListenAndServe(":10003", nil) //nolint:errcheck
 }
 
 func main() {
@@ -42,8 +42,11 @@ func main() {
 }
 
 func deadloop(wr http.ResponseWriter, req *http.Request) {
-	for i := 0; i < 4; i++ {
-		for {
+	for {
+		select {
+		case <-req.Context().Done():
+			break
+		default:
 			time.Sleep(time.Millisecond)
 		}
 	}
