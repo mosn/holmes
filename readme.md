@@ -217,7 +217,7 @@ h, _ := holmes.New(
 ```
 
 ### Running in docker or other cgroup limited environment
-
+Support both CGroup V1 and V2 versions, but don't support mixed-use.
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
