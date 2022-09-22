@@ -25,6 +25,7 @@ import (
 	"mosn.io/holmes"
 )
 
+// run `curl http://localhost:10003/alldeadloopoc` after 15s(warn up)
 func init() {
 	http.HandleFunc("/deadloop", deadloop)
 	go http.ListenAndServe(":10003", nil) //nolint:errcheck
@@ -33,8 +34,8 @@ func init() {
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCollectInterval("2s"),
-		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
+		holmes.WithDumpPath("./tmp"),
+		holmes.WithLogger(holmes.NewFileLog("./tmp/holmes.log", mlog.DEBUG)),
 		holmes.WithCPUDump(10, 25, 80, time.Minute),
 	)
 	h.EnableCPUDump().Start()

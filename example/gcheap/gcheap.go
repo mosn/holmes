@@ -21,6 +21,7 @@ import (
 	"fmt"
 	mlog "mosn.io/pkg/log"
 
+
 	//"mosn.io/holmes/reporters/http_reporter"
 	"math/rand"
 	"net/http"
@@ -29,6 +30,8 @@ import (
 	"mosn.io/holmes"
 )
 
+// run `curl http://localhost:10003/rand` after 15s(warn up)
+// run `curl http://localhost:10003/spike` after 15s(warn up)
 func init() {
 	http.HandleFunc("/rand", randAlloc)
 	http.HandleFunc("/spike", spikeAlloc)
@@ -38,8 +41,8 @@ func init() {
 func main() {
 	// reporter := http_reporter.NewReporter("TOKEN", "URL")
 	h, _ := holmes.New(
-		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
+		holmes.WithDumpPath("./tmp"),
+		holmes.WithLogger(holmes.NewFileLog("./tmp/holmes.log", mlog.DEBUG)),
 		holmes.WithBinaryDump(),
 		holmes.WithMemoryLimit(100*1024*1024), // 100MB
 		holmes.WithGCHeapDump(10, 20, 40, time.Minute),
