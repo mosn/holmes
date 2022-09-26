@@ -26,6 +26,9 @@ import (
 	"mosn.io/holmes"
 )
 
+// run `curl http://localhost:10003/lockorder1` after 15s(warn up)
+// run `curl http://localhost:10003/lockorder2` after 15s(warn up)
+// run `curl http://localhost:10003/req` after 15s(warn up)
 func init() {
 	http.HandleFunc("/lockorder1", lockorder1)
 	http.HandleFunc("/lockorder2", lockorder2)
@@ -36,8 +39,8 @@ func init() {
 func main() {
 	h, _ := holmes.New(
 		holmes.WithCollectInterval("5s"),
-		holmes.WithDumpPath("/tmp"),
-		holmes.WithLogger(holmes.NewFileLog("/tmp/holmes.log", mlog.INFO)),
+		holmes.WithDumpPath("./tmp"),
+		holmes.WithLogger(holmes.NewFileLog("./tmp/holmes.log", mlog.DEBUG)),
 		holmes.WithTextDump(),
 		holmes.WithGoroutineDump(10, 25, 2000, 10000, time.Minute),
 	)
