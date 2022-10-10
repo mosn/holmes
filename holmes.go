@@ -359,14 +359,14 @@ func (h *Holmes) goroutineProfile(gNum int, c grOptions) bool {
 	if !match {
 		h.Infof(UniformLogFormat, "NODUMP", check2name[goroutine],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
-			c.GoroutineTriggerNumMax, h.grNumStats.data, gNum)
+			c.GoroutineTriggerNumMax, h.grNumStats.sequentialData(), gNum)
 		return false
 	}
 
 	h.Alertf("holmes.goroutine", UniformLogFormat, "pprof ", check2name[goroutine],
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 		c.GoroutineTriggerNumMax,
-		h.grNumStats.data, gNum)
+		h.grNumStats.sequentialData(), gNum)
 
 	var buf bytes.Buffer
 	_ = pprof.Lookup("goroutine").WriteTo(&buf, int(h.opts.DumpProfileType)) // nolint: errcheck
@@ -407,7 +407,7 @@ func (h *Holmes) memProfile(rss int, c typeOption) bool {
 		// let user know why this should not dump
 		h.Infof(UniformLogFormat, "NODUMP", check2name[mem],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
-			h.memStats.data, rss)
+			h.memStats.sequentialData(), rss)
 
 		return false
 	}
@@ -531,7 +531,7 @@ func (h *Holmes) threadProfile(curThreadNum int, c typeOption) bool {
 		// let user know why this should not dump
 		h.Infof(UniformLogFormat, "NODUMP", check2name[thread],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
-			h.threadStats.data, curThreadNum)
+			h.threadStats.sequentialData(), curThreadNum)
 
 		return false
 	}
@@ -589,14 +589,14 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		// let user know why this should not dump
 		h.Infof(UniformLogFormat, "NODUMP", check2name[cpu],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
-			h.cpuStats.data, curCPUUsage)
+			h.cpuStats.sequentialData(), curCPUUsage)
 
 		return false
 	}
 
 	h.Alertf("holmes.cpu", UniformLogFormat, "pprof dump", check2name[cpu],
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
-		h.cpuStats.data, curCPUUsage)
+		h.cpuStats.sequentialData(), curCPUUsage)
 
 	bf, binFileName, err := getBinaryFileNameAndCreate(h.opts.DumpPath, cpu, "")
 	if err != nil {
@@ -736,7 +736,7 @@ func (h *Holmes) gcHeapProfile(gc int, force bool, c typeOption) bool {
 		h.Infof(UniformLogFormat, "NODUMP", check2name[gcHeap],
 			c.TriggerMin, c.TriggerDiff, c.TriggerAbs,
 			NotSupportTypeMaxConfig,
-			h.gcHeapStats.data, gc)
+			h.gcHeapStats.sequentialData(), gc)
 
 		return false
 	}

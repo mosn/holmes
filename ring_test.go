@@ -57,3 +57,45 @@ func TestRing(t *testing.T) {
 		assert.Equal(t, r.avg(), cas.avg)
 	}
 }
+
+func Test_ring_humanData(t *testing.T) {
+	r := newRing(5)
+	var cases = []struct {
+		except []int
+	}{
+		{
+			except: []int{1, 0, 0, 0, 0},
+		},
+		{
+			except: []int{1, 2, 0, 0, 0},
+		},
+		{
+			except: []int{1, 2, 3, 0, 0},
+		},
+		{
+			except: []int{1, 2, 3, 4, 0},
+		},
+		{
+			except: []int{1, 2, 3, 4, 5},
+		},
+		{
+			except: []int{2, 3, 4, 5, 6},
+		},
+		{
+			except: []int{3, 4, 5, 6, 7},
+		},
+		{
+			except: []int{4, 5, 6, 7, 8},
+		},
+		{
+			except: []int{5, 6, 7, 8, 9},
+		},
+		{
+			except: []int{6, 7, 8, 9, 10},
+		},
+	}
+	for i := 0; i < 10; i++ {
+		r.push(i + 1)
+		assert.Equal(t, r.sequentialData(), cases[i].except)
+	}
+}
