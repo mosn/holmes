@@ -62,7 +62,7 @@ func (r *ring) avg() int {
 func (r *ring) sequentialData() []int {
 	index := r.idx
 	slice := make([]int, r.maxLen)
-	if len(r.data) < r.maxLen {
+	if r.idx == 0 || len(r.data) < r.maxLen {
 		copy(slice, r.data)
 		return slice
 	}
