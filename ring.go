@@ -62,6 +62,7 @@ func (r *ring) avg() int {
 func (r *ring) sequentialData() []int {
 	index := r.idx
 	slice := make([]int, r.maxLen)
+	// len(r.data) < r.maxLen ( cap > len ), index is not incremented. >>> (r.data = append(r.data, i)).  r.idx starts scrolling only when the array is full.
 	if index == 0 {
 		copy(slice, r.data)
 		return slice
