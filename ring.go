@@ -17,30 +17,19 @@
 
 package holmes
 
-import (
-	"sync"
-)
-
 type ring struct {
 	data   []int
 	idx    int
 	sum    int
 	maxLen int
-	pool   *sync.Pool
 }
 
 func newRing(maxLen int) ring {
-	r := ring{
+	return ring{
 		data:   make([]int, 0, maxLen),
 		idx:    0,
 		maxLen: maxLen,
-		pool:   &sync.Pool{},
 	}
-	r.pool.New = func() interface{} {
-		ret := make([]int, r.maxLen)
-		return &ret
-	}
-	return r
 }
 
 func (r *ring) push(i int) {
@@ -72,13 +61,12 @@ func (r *ring) avg() int {
 
 func (r *ring) sequentialData() []int {
 	index := r.idx
-	slice := r.pool.Get().(*[]int)
-	defer r.pool.Put(slice)
+	slice := make([]int, r.maxLen)
 	if len(r.data) < r.maxLen {
-		copy(*slice, r.data)
-		return *slice
+		copy(slice, r.data)
+		return slice
 	}
-	copy(*slice, r.data[index:])
-	copy((*slice)[r.maxLen-index:], r.data[:index])
-	return *slice
+	copy(slice, r.data[index:])
+	copy((slice)[r.maxLen-index:], r.data[:index])
+	return slice
 }
