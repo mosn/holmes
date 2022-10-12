@@ -67,6 +67,7 @@ func initHolmes() *Holmes{
 ```
 
 holmes 支持对以下几种应用指标进行监控:
+
 	* mem: 内存分配     
 	* cpu: cpu使用率      
 	* thread: 线程数    
