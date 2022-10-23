@@ -10,23 +10,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: golangci-lint
-        uses: reviewdog/action-golangci-lint@v1
+        uses: reviewdog/action-golangci-lint@v2
         with:
           golangci_lint_flags: --timeout=10m --tests=false --skip-dirs=example
 
   test:
     name: Test
     runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.14.13
+    # A matrix proves the supported range of Go versions work. This must always
+    # include the floor Go version policy of Mosn and the current Go version.
+    # Mosn's floor Go version for libraries is two behind current, e.g. if Go
+    # supports 1.19 and 1.20, Mosn libraries must work on 1.18, 1.19 and 1.20.
+    #
+    # A floor version is required to ensure Mosn can receive security patches.
+    # Without one, dependencies become locked to an old version of Go, which
+    # itself receives no security patch updates.
+    #
+    # Mosn's binary is built with Go's floor version, e.g. if Go supports 1.19
+    # and 1.20, Mosn will build any downloadable executables with 1.19.
+    #
+    # Even if mosn works with a Go version below its supported floor, users
+    # must not depend on this. Mosn and its library dependencies are free to
+    # use features in the supported floor Go version at any time. This remains
+    # true even if mosn library dependencies are not eagerly updated.
+    strategy:
+      matrix:
+        go-version:
+          - "1.19"  # Current Go version
+          - "1.18"
+          - "1.17"  # Floor Go version of Mosn == current - 2
 
+    steps:
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
 
       - name: holmes test
         run: make test
