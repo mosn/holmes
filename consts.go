@@ -48,13 +48,14 @@ const (
 	defaultThreadCoolDown    = time.Hour
 	defaultGoroutineCoolDown = time.Minute * 10
 
-	defaultInterval        = 5 * time.Second
-	defaultDumpProfileType = binaryDump
-	defaultDumpPath        = "/tmp"
-	defaultLoggerName      = "holmes.log"
-	defaultLoggerFlags     = os.O_RDWR | os.O_CREATE | os.O_APPEND
-	defaultLoggerPerm      = 0644
-	defaultShardLoggerSize = 5242880 // 5m
+	defaultInterval          = 5 * time.Second
+	defaultDumpProfileType   = binaryDump
+	defaultDumpPath          = "/tmp"
+	defaultDumpFileExtension = ".log"
+	defaultLoggerName        = "holmes.log"
+	defaultLoggerFlags       = os.O_RDWR | os.O_CREATE | os.O_APPEND
+	defaultLoggerPerm        = 0644
+	defaultShardLoggerSize   = 5242880 // 5m
 )
 
 type dumpProfileType int

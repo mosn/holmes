@@ -598,7 +598,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		c.TriggerMin, c.TriggerDiff, c.TriggerAbs, NotSupportTypeMaxConfig,
 		h.cpuStats.sequentialData(), curCPUUsage)
 
-	bf, binFileName, err := getBinaryFileNameAndCreate(h.opts.DumpPath, cpu, "")
+	bf, binFileName, err := getBinaryFileNameAndCreate(h.opts.DumpPath, h.opts.DumpFileExtension, cpu, "")
 	if err != nil {
 		h.Errorf("[Holmes] failed to create cpu profile file: %v", err.Error())
 		return false

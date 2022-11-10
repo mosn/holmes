@@ -194,8 +194,8 @@ func matchRule(history ring, curVal, ruleMin, ruleAbs, ruleDiff, ruleMax int) (b
 	return false, ReasonCurlGreaterMin
 }
 
-func getBinaryFileName(filePath string, dumpType configureType, eventID string) string {
-	suffix := time.Now().Format("20060102150405.000") + ".log"
+func getBinaryFileName(filePath, fileExtension string, dumpType configureType, eventID string) string {
+	suffix := time.Now().Format("20060102150405.000") + fileExtension
 	if len(eventID) == 0 {
 		return path.Join(filePath, check2name[dumpType]+"."+suffix)
 	}
@@ -204,8 +204,8 @@ func getBinaryFileName(filePath string, dumpType configureType, eventID string) 
 }
 
 // fix #89
-func getBinaryFileNameAndCreate(dump string, dumpType configureType, eventID string) (*os.File, string, error) {
-	filepath := getBinaryFileName(dump, dumpType, eventID)
+func getBinaryFileNameAndCreate(dump, extension string, dumpType configureType, eventID string) (*os.File, string, error) {
+	filepath := getBinaryFileName(dump, extension, dumpType, eventID)
 	f, err := os.OpenFile(filepath, defaultLoggerFlags, defaultLoggerPerm)
 	if err != nil && os.IsNotExist(err) {
 		if err = os.MkdirAll(dump, 0o755); err != nil {
@@ -234,7 +234,7 @@ func writeFile(data bytes.Buffer, dumpType configureType, dumpOpts *DumpOptions,
 		buf = data.Bytes()
 	}
 
-	file, fileName, err := getBinaryFileNameAndCreate(dumpOpts.DumpPath, dumpType, eventID)
+	file, fileName, err := getBinaryFileNameAndCreate(dumpOpts.DumpPath, dumpOpts.DumpFileExtension, dumpType, eventID)
 	if err != nil {
 		return fileName, fmt.Errorf("pprof %v open file failed : %w", type2name[dumpType], err)
 	}

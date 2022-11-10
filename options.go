@@ -89,6 +89,8 @@ type DumpOptions struct {
 	DumpFullStack bool
 	// dump profile to logger. It will make huge log output if enable DumpToLogger option. issues/90
 	DumpToLogger bool
+	// set the dump file extension, default is .log
+	DumpFileExtension string
 }
 
 // ShrinkThrOptions contains the configuration about shrink thread
@@ -174,9 +176,10 @@ func newOptions() *options {
 		CollectInterval:   defaultInterval,
 		intervalResetting: make(chan struct{}, 1),
 		DumpOptions: &DumpOptions{
-			DumpPath:        defaultDumpPath,
-			DumpProfileType: defaultDumpProfileType,
-			DumpFullStack:   false,
+			DumpPath:          defaultDumpPath,
+			DumpProfileType:   defaultDumpProfileType,
+			DumpFullStack:     false,
+			DumpFileExtension: defaultDumpFileExtension,
 		},
 		ShrinkThrOptions: &ShrinkThrOptions{
 			Enable: false,
@@ -200,6 +203,14 @@ func WithLogger(logger mlog.ErrorLogger) Option {
 func WithDumpPath(dumpPath string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.DumpPath = dumpPath
+		return
+	})
+}
+
+// WithDumpFileExtension set the dump file extension for holmes.
+func WithDumpFileExtension(extension string) Option {
+	return optionFunc(func(opts *options) (err error) {
+		opts.DumpFileExtension = extension
 		return
 	})
 }
@@ -320,8 +331,8 @@ func (base *typeOption) Set(min, abs, diff int, coolDown time.Duration) {
 
 // newMemOptions
 // enable the heap dumper, should dump if one of the following requirements is matched
-//   1. memory usage > TriggerMin && memory usage diff > TriggerDiff
-//   2. memory usage > TriggerAbs.
+//  1. memory usage > TriggerMin && memory usage diff > TriggerDiff
+//  2. memory usage > TriggerAbs.
 func newMemOptions() *typeOption {
 	return newTypeOpts(
 		defaultMemTriggerMin,
@@ -341,8 +352,9 @@ func WithMemDump(min int, diff int, abs int, coolDown time.Duration) Option {
 
 // newGCHeapOptions
 // enable the heap dumper, should dump if one of the following requirements is matched
-//   1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
-//   2. GC heap usage > TriggerAbs
+//  1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
+//  2. GC heap usage > TriggerAbs
+//
 // in percent.
 func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
@@ -398,8 +410,9 @@ func WithThreadDump(min, diff, abs int, coolDown time.Duration) Option {
 // newCPUOptions
 // enable the cpu dumper, should dump if one of the following requirements is matched
 // in percent
-//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
-//   2. cpu usage > CPUTriggerAbs
+//  1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
+//  2. cpu usage > CPUTriggerAbs
+//
 // in percent.
 func newCPUOptions() *typeOption {
 	return newTypeOpts(
