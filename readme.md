@@ -53,6 +53,7 @@ h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
+    holmes.WithDumpFileExtension(".out"),
     holmes.WithDumpToLogger(true),
     holmes.WithGoroutineDump(10, 25, 2000, 10*1000,time.Minute),
 )
@@ -68,6 +69,7 @@ h.Stop()
 * WithCollectInterval("5s") means the system metrics are collected once 5 seconds
 * WithDumpPath("/tmp") means the dump binary file(binary mode)  will write content to `/tmp` dir.
 * WithTextDump() means not in binary mode, so it's text mode profiles
+* WithDumpFileExtension() set the extension of the dump profile,default is `.log`
 * WithDumpToLogger() means profiles information will be outputted to logger.  
 * WithGoroutineDump(10, 25, 2000, 100*1000,time.Minute) means dump will happen when current_goroutine_num > 10 && 
   current_goroutine_num < `100*1000` && current_goroutine_num > `125%` * previous_average_goroutine_num or current_goroutine_num > `2000`,
