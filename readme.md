@@ -46,6 +46,10 @@ to your dump path. You could just fetch the profile and see what actually happen
 
 ## How to use
 
+```shell
+    go get mosn.io/holmes
+```
+
 ### Dump goroutine when goroutine number spikes
 
 ```go
@@ -204,15 +208,15 @@ h, _ := holmes.New(
     holmes.WithTextDump(),
 
     holmes.WithCPUDump(10, 25, 80, time.Minute),
-    //holmes.WithMemDump(30, 25, 80, time.Minute),
+    holmes.WithMemDump(30, 25, 80, time.Minute),
     holmes.WithGCHeapDump(10, 20, 40, time.Minute),
-    holmes.WithGoroutineDump(500, 25, 20000, 0,time.Minute),
+    holmes.WithGoroutineDump(500, 25, 20000, 0, time.Minute),
 )
 
     h.EnableCPUDump().
     EnableGoroutineDump().
 	EnableMemDump().
-	EnableGCHeapDump().
+	EnableGCHeapDump().Start()
 
 ```
 
