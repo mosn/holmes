@@ -19,9 +19,10 @@ package main
 
 import (
 	"fmt"
-	mlog "mosn.io/pkg/log"
 	"net/http"
 	"time"
+
+	mlog "mosn.io/pkg/log"
 
 	"mosn.io/holmes"
 )
@@ -45,7 +46,7 @@ func main() {
 }
 
 func alloc(wr http.ResponseWriter, req *http.Request) {
-	var m = make(map[string]string, 102400)
+	var m = make(map[string]string, 1073741824)
 	for i := 0; i < 1000; i++ {
 		m[fmt.Sprint(i)] = fmt.Sprint(i)
 	}

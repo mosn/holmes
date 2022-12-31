@@ -18,13 +18,15 @@
 package main
 
 import (
-	mlog "mosn.io/pkg/log"
 	"net/http"
 	"time"
+
+	mlog "mosn.io/pkg/log"
 
 	"mosn.io/holmes"
 )
 
+// run `curl http://localhost:10003/cpuex` after 15s(warn up)
 func init() {
 	http.HandleFunc("/cpuex", cpuex)
 	go http.ListenAndServe(":10003", nil) //nolint:errcheck
@@ -44,7 +46,7 @@ func main() {
 func cpuex(wr http.ResponseWriter, req *http.Request) {
 	go func() {
 		for {
-			time.Sleep(time.Millisecond)
+
 		}
 	}()
 }
