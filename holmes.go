@@ -703,12 +703,21 @@ func (h *Holmes) getCPUCore() (float64, error) {
 		return h.opts.cpuCore, nil
 	}
 
-	if h.opts.UseGoProcAsCPUCore {
-		return float64(runtime.GOMAXPROCS(-1)), nil
+	if h.opts.UseCGroup {
+		// If executed get cpuCore equal to 0 (most likely because no resource limit is set),
+		// Then only print out err, and finally return the number of CPU logic cores compatible.
+		cpuCore, err := getCGroupCPUCore()
+		if err != nil {
+			h.Warnf("[Holmes] get CGroup CPU core failed, CPU core: %v, error: %v", cpuCore, err)
+		}
+		if cpuCore > 0 {
+			return cpuCore, nil
+		}
 	}
 
-	if h.opts.UseCGroup {
-		return getCGroupCPUCore()
+	// Support to be used together with UseCGroup, and CGroup has higher priority
+	if h.opts.UseGoProcAsCPUCore {
+		return float64(runtime.GOMAXPROCS(-1)), nil
 	}
 
 	return float64(runtime.NumCPU()), nil
