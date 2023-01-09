@@ -427,6 +427,8 @@ func WithGoProcAsCPUCore(enabled bool) Option {
 }
 
 // WithCGroup set holmes use cgroup or not.
+// Use CGroup are best used when resource limits are set.
+// refer to: https://github.com/mosn/holmes/issues/135
 func WithCGroup(useCGroup bool) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.UseCGroup = useCGroup
