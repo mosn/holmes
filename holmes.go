@@ -709,7 +709,7 @@ func (h *Holmes) getCPUCore() (float64, error) {
 		// Then only print out err, and finally return the number of CPU logic cores compatible.
 		cpuCore, err := getCGroupCPUCore()
 		if err != nil {
-			h.Warnf("[Holmes] get CGroup CPU core failed, will try to obtain cpu in other ways. CPU core: %v, error: %v", cpuCore, err)
+			h.Warnf("[Holmes] get CGroup CPU core failed, will try to obtain cpu in other ways. error: %v", err)
 		}
 		if cpuCore > 0 {
 			return cpuCore, nil
