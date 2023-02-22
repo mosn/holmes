@@ -22,12 +22,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
-	"mosn.io/holmes"
 	"net/http"
 	"net/url"
-	"path"
+	"path/filepath"
 	"strconv"
 	"time"
+
+	"mosn.io/holmes"
 
 	mlog "mosn.io/pkg/log"
 )
@@ -102,7 +103,7 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 	q.Set("units", j.Units)
 	q.Set("aggregationType", j.AggregationType)
 
-	u.Path = path.Join(u.Path, "/ingest")
+	u.Path = filepath.Join(u.Path, "/ingest")
 	u.RawQuery = q.Encode()
 
 	r.Logger.Debugf("uploading at %s", u.String())
