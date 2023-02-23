@@ -19,8 +19,8 @@ package main
 
 import (
 	"fmt"
-	mlog "mosn.io/pkg/log"
 
+	mlog "mosn.io/pkg/log"
 
 	//"mosn.io/holmes/reporters/http_reporter"
 	"math/rand"
@@ -30,8 +30,8 @@ import (
 	"mosn.io/holmes"
 )
 
-// run `curl http://localhost:10003/rand` after 15s(warn up)
-// run `curl http://localhost:10003/spike` after 15s(warn up)
+// run `curl http://localhost:10024/rand` after 15s(warn up)
+// run `curl http://localhost:10024/spike` after 15s(warn up)
 func init() {
 	http.HandleFunc("/rand", randAlloc)
 	http.HandleFunc("/spike", spikeAlloc)
