@@ -49,17 +49,56 @@ const (
 	ReservedTagKeyName = "__name__"
 )
 
+var (
+	heapSampleTypes = map[string]*SampleType{
+		"alloc_objects": {
+			Units:      "objects",
+			Cumulative: false,
+		},
+		"alloc_space": {
+			Units:      "bytes",
+			Cumulative: false,
+		},
+		"inuse_space": {
+			Units:       "bytes",
+			Aggregation: "average",
+			Cumulative:  false,
+		},
+		"inuse_objects": {
+			Units:       "objects",
+			Aggregation: "average",
+			Cumulative:  false,
+		},
+	}
+	goroutineSampleTypes = map[string]*SampleType{
+		"goroutine": {
+			DisplayName: "goroutines",
+			Units:       "goroutines",
+			Aggregation: "average",
+		},
+	}
+)
+
+type SampleType struct {
+	Units       string `json:"units,omitempty"`
+	Aggregation string `json:"aggregation,omitempty"`
+	DisplayName string `json:"display-name,omitempty"`
+	Sampled     bool   `json:"sampled,omitempty"`
+	Cumulative  bool   `json:"cumulative,omitempty"`
+}
+
 type UploadJob struct {
-	Name            string
-	StartTime       time.Time
-	EndTime         time.Time
-	SpyName         string
-	SampleRate      uint32
-	Units           string
-	AggregationType string
-	Format          UploadFormat
-	Profile         []byte
-	PrevProfile     []byte
+	Name             string
+	StartTime        time.Time
+	EndTime          time.Time
+	SpyName          string
+	SampleRate       uint32
+	Units            string
+	AggregationType  string
+	Format           UploadFormat
+	Profile          []byte
+	PrevProfile      []byte
+	SampleTypeConfig map[string]*SampleType
 }
 
 type RemoteConfig struct {

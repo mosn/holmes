@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"mosn.io/holmes"
 )
 
@@ -16,11 +17,9 @@ func TestMain(m *testing.M) {
 	log.Println("holmes initialing")
 	h, _ = holmes.New(
 		holmes.WithCollectInterval("1s"),
-		holmes.WithDumpPath("./"),
-		holmes.WithTextDump(),
 	)
 	log.Println("holmes initial success")
-	h.EnableCPUDump().Start()
+	h.EnableMemDump().EnableGoroutineDump().EnableCPUDump().Start()
 	time.Sleep(11 * time.Second)
 	log.Println("on running")
 	newMockServer()
@@ -47,9 +46,10 @@ func TestPyroscopeClient(t *testing.T) {
 
 	err = h.Set(
 		holmes.WithProfileReporter(pReporter),
-		holmes.WithGoroutineDump(5, 10, 20, 90, time.Second),
+		holmes.WithGoroutineDump(0, 0, 1, 2, time.Second),
 		holmes.WithCPUDump(0, 2, 80, time.Second),
-		holmes.WithCollectInterval("5s"),
+		holmes.WithMemDump(0, 1, 1, time.Second),
+		holmes.WithCollectInterval("1s"),
 	)
 	if err != nil {
 		log.Fatalf("fail to set opts on running time.")
