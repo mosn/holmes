@@ -19,6 +19,7 @@ package pyroscope_reporter
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
@@ -91,6 +92,17 @@ func (r *PyroscopeReporter) uploadProfile(j *UploadJob) error {
 			return err
 		}
 	}
+	if j.SampleTypeConfig != nil {
+		fw, err = writer.CreateFormFile("sample_type_config", "sample_type_config.json")
+		if err != nil {
+			return err
+		}
+		b, err := json.Marshal(j.SampleTypeConfig)
+		if err != nil {
+			return err
+		}
+		fw.Write(b)
+	}
 	writer.Close() // nolint: errcheck
 
 	q := u.Query()
@@ -150,20 +162,32 @@ func (r *PyroscopeReporter) Report(ptype string, filename string, reason holmes.
 	endTime := sampleTime.Truncate(DefaultUploadRate)
 	startTime := endTime.Add(-DefaultUploadRate)
 	_, _, _, _, _ = ptype, filename, reason, eventID, scene
+	stc := sampleTypeCfg(ptype)
 	j := &UploadJob{
-		Name:            r.AppName,
-		StartTime:       startTime,
-		EndTime:         endTime,
-		SpyName:         "gospy",
-		SampleRate:      100,
-		Units:           "samples",
-		AggregationType: "sum",
-		Format:          Pprof,
-		Profile:         pprofBytes,
+		Name:             r.AppName,
+		StartTime:        startTime,
+		EndTime:          endTime,
+		SpyName:          "gospy",
+		SampleRate:       100,
+		Units:            "samples",
+		AggregationType:  "sum",
+		Format:           Pprof,
+		Profile:          pprofBytes,
+		SampleTypeConfig: stc,
 	}
 
 	if err := r.uploadProfile(j); err != nil {
 		return err
+	}
+	return nil
+}
+
+func sampleTypeCfg(ptype string) map[string]*SampleType {
+	switch ptype {
+	case "heap":
+		return heapSampleTypes
+	case "goroutine":
+		return goroutineSampleTypes
 	}
 	return nil
 }
