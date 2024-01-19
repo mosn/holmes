@@ -140,7 +140,7 @@ h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
     holmes.WithDumpPath("/tmp"),
     holmes.WithTextDump(),
-    holmes.WithMemDump(30, 25, 80, time.Mintue),
+    holmes.WithMemDump(30, 25, 80, time.Minute),
 )
 
 h.EnableMemDump()
