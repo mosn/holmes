@@ -118,6 +118,7 @@ func getCGroupCPUCore() (float64, error) {
 		return 0, err
 	}
 
+	// No resource limit value is configured, the value is -1
 	if cpuQuota, err = readUint(cgroupCpuQuotaPath); err != nil {
 		return 0, err
 	}
