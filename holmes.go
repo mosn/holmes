@@ -698,17 +698,26 @@ func (h *Holmes) gcHeapCheckAndDump() {
 	}
 }
 
+// Support `UseGoProcAsCPUCore` to be used together with `UseCGroup`, and `UseCGroup` has higher priority.
 func (h *Holmes) getCPUCore() (float64, error) {
 	if h.opts.cpuCore > 0 {
 		return h.opts.cpuCore, nil
 	}
 
-	if h.opts.UseGoProcAsCPUCore {
-		return float64(runtime.GOMAXPROCS(-1)), nil
+	if h.opts.UseCGroup {
+		// If executed get cpuCore equal to 0 (most likely because no resource limit is set),
+		// Then only print out err, and finally return the number of CPU logic cores compatible.
+		cpuCore, err := getCGroupCPUCore()
+		if err != nil {
+			h.Warnf("[Holmes] get CGroup CPU core failed, will try to obtain cpu in other ways. error: %v", err)
+		}
+		if cpuCore > 0 {
+			return cpuCore, nil
+		}
 	}
 
-	if h.opts.UseCGroup {
-		return getCGroupCPUCore()
+	if h.opts.UseGoProcAsCPUCore {
+		return float64(runtime.GOMAXPROCS(-1)), nil
 	}
 
 	return float64(runtime.NumCPU()), nil
