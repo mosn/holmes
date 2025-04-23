@@ -238,14 +238,14 @@ func WithCPUMax(max int) Option {
 func WithCPUSamplingTime(duration string) Option {
 	return optionFunc(func(opts *options) (err error) {
 		// CPUSamplingTime wouldn't be zero value, because it
-		// will be initialized as defaultInterval at newOptions()
+		// will be initialized as defaultCPUSamplingTime at newOptions()
 		newDuration, err := time.ParseDuration(duration)
 		if err != nil {
 			return
 		}
 
 		if newDuration <= 0 {
-			newDuration = defaultInterval
+			newDuration = defaultCPUSamplingTime
 		}
 
 		opts.CPUSamplingTime = newDuration
