@@ -611,7 +611,7 @@ func (h *Holmes) cpuProfile(curCPUUsage int, c typeOption) bool {
 		return false
 	}
 
-	time.Sleep(defaultCPUSamplingTime)
+	time.Sleep(h.opts.CPUSamplingTime)
 	pprof.StopCPUProfile()
 
 	rptOpts, bfCpy := h.opts.GetReporterOpts(), []byte{}

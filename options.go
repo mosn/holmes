@@ -48,6 +48,9 @@ type options struct {
 	// move may result of the system crash.
 	CPUMaxPercent int
 
+	// cpu sampling time
+	CPUSamplingTime time.Duration
+
 	// if write lock is held mean holmes's
 	// configuration is being modified.
 	L *sync.RWMutex
@@ -173,6 +176,7 @@ func newOptions() *options {
 		threadOpts:        newThreadOptions(),
 		CollectInterval:   defaultInterval,
 		intervalResetting: make(chan struct{}, 1),
+		CPUSamplingTime:   defaultCPUSamplingTime,
 		DumpOptions: &DumpOptions{
 			DumpPath:        defaultDumpPath,
 			DumpProfileType: defaultDumpProfileType,
@@ -226,6 +230,26 @@ func WithCollectInterval(interval string) Option {
 func WithCPUMax(max int) Option {
 	return optionFunc(func(opts *options) (err error) {
 		opts.CPUMaxPercent = max
+		return
+	})
+}
+
+// WithCPUSamplingTime set cpu sampling time
+func WithCPUSamplingTime(duration string) Option {
+	return optionFunc(func(opts *options) (err error) {
+		// CPUSamplingTime wouldn't be zero value, because it
+		// will be initialized as defaultInterval at newOptions()
+		newDuration, err := time.ParseDuration(duration)
+		if err != nil {
+			return
+		}
+
+		if newDuration <= 0 {
+			newDuration = defaultInterval
+		}
+
+		opts.CPUSamplingTime = newDuration
+
 		return
 	})
 }
@@ -320,8 +344,8 @@ func (base *typeOption) Set(min, abs, diff int, coolDown time.Duration) {
 
 // newMemOptions
 // enable the heap dumper, should dump if one of the following requirements is matched
-//   1. memory usage > TriggerMin && memory usage diff > TriggerDiff
-//   2. memory usage > TriggerAbs.
+//  1. memory usage > TriggerMin && memory usage diff > TriggerDiff
+//  2. memory usage > TriggerAbs.
 func newMemOptions() *typeOption {
 	return newTypeOpts(
 		defaultMemTriggerMin,
@@ -341,8 +365,9 @@ func WithMemDump(min int, diff int, abs int, coolDown time.Duration) Option {
 
 // newGCHeapOptions
 // enable the heap dumper, should dump if one of the following requirements is matched
-//   1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
-//   2. GC heap usage > TriggerAbs
+//  1. GC heap usage > TriggerMin && GC heap usage diff > TriggerDiff
+//  2. GC heap usage > TriggerAbs
+//
 // in percent.
 func newGCHeapOptions() *typeOption {
 	return newTypeOpts(
@@ -398,8 +423,9 @@ func WithThreadDump(min, diff, abs int, coolDown time.Duration) Option {
 // newCPUOptions
 // enable the cpu dumper, should dump if one of the following requirements is matched
 // in percent
-//   1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
-//   2. cpu usage > CPUTriggerAbs
+//  1. cpu usage > CPUTriggerMin && cpu usage diff > CPUTriggerDiff
+//  2. cpu usage > CPUTriggerAbs
+//
 // in percent.
 func newCPUOptions() *typeOption {
 	return newTypeOpts(
