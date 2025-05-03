@@ -92,12 +92,6 @@ var check2name = map[configureType]string{
 	gcHeap:    "GCHeap",
 }
 
-const (
-	cgroupMemLimitPath  = "/sys/fs/cgroup/memory/memory.limit_in_bytes"
-	cgroupCpuQuotaPath  = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
-	cgroupCpuPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
-)
-
 const minCollectCyclesBeforeDumpStart = 10
 
 const (

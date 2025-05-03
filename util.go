@@ -20,47 +20,19 @@ package holmes
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
-	"strconv"
 	"strings"
 	"time"
+
+	"mosn.io/holmes/internal/cg"
 
 	mem_util "github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
 )
-
-// copied from https://github.com/containerd/cgroups/blob/318312a373405e5e91134d8063d04d59768a1bff/utils.go#L251
-func parseUint(s string, base, bitSize int) (uint64, error) {
-	v, err := strconv.ParseUint(s, base, bitSize)
-	if err != nil {
-		intValue, intErr := strconv.ParseInt(s, base, bitSize)
-		// 1. Handle negative values greater than MinInt64 (and)
-		// 2. Handle negative values lesser than MinInt64
-		if intErr == nil && intValue < 0 {
-			return 0, nil
-		} else if intErr != nil &&
-			intErr.(*strconv.NumError).Err == strconv.ErrRange &&
-			intValue < 0 {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return v, nil
-}
-
-// copied from https://github.com/containerd/cgroups/blob/318312a373405e5e91134d8063d04d59768a1bff/utils.go#L243
-func readUint(path string) (uint64, error) {
-	v, err := ioutil.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
-	return parseUint(strings.TrimSpace(string(v)), 10, 64)
-}
 
 // only reserve the top n.
 func trimResultTop(buffer bytes.Buffer) []byte {
@@ -111,30 +83,29 @@ func getUsage() (float64, uint64, int, int, error) {
 
 // get cpu core number limited by CGroup.
 func getCGroupCPUCore() (float64, error) {
-	var cpuQuota uint64
-
-	cpuPeriod, err := readUint(cgroupCpuPeriodPath)
-	if cpuPeriod == 0 || err != nil {
+	quota, err := cg.GetCPUCore()
+	if err != nil {
 		return 0, err
 	}
-
-	if cpuQuota, err = readUint(cgroupCpuQuotaPath); err != nil {
-		return 0, err
+	if quota == -1 {
+		quota = float64(runtime.NumCPU())
 	}
-
-	return float64(cpuQuota) / float64(cpuPeriod), nil
+	return quota, nil
 }
 
 func getCGroupMemoryLimit() (uint64, error) {
-	usage, err := readUint(cgroupMemLimitPath)
+	usage, err := cg.GetMemoryLimit()
 	if err != nil {
 		return 0, err
 	}
-	machineMemory, err := mem_util.VirtualMemory()
+	machineMemory, err := getNormalMemoryLimit()
 	if err != nil {
 		return 0, err
 	}
-	limit := uint64(math.Min(float64(usage), float64(machineMemory.Total)))
+	if usage == -1 {
+		return machineMemory, nil
+	}
+	limit := uint64(math.Min(float64(usage), float64(machineMemory)))
 	return limit, nil
 }
 

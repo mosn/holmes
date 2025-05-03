@@ -236,7 +236,7 @@ h, _ := holmes.New(
 ```
 
 ### 在docker 或者cgroup环境下运行 holmes
-
+支持 Cgroup V1, V2 两个版本, 但暂不支持混用。
 ```go
 h, _ := holmes.New(
     holmes.WithCollectInterval("5s"),
