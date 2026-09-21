@@ -136,7 +136,7 @@ func (h *Holmes) EnableMemDump() *Holmes {
 
 // DisableMemDump disables the mem dump.
 func (h *Holmes) DisableMemDump() *Holmes {
-	h.opts.gCHeapOpts.Enable = false
+	h.opts.memOpts.Enable = false
 	return h
 }
 
